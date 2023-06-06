@@ -16,7 +16,9 @@
 </p>
 
 
+<p align="center">
 Downscaling ERA5 using machine learning techniques
+</p>
 
 ## Workflow
 
