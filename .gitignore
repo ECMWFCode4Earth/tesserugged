@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+# R
+*.rds
+*.rda
+*.RData
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+# LaTeX
+*.synctex.gz
+# Output
+*.pdf
+*.png
+# Data
+*.xlsx
+*.xls
+*.feather
+# Vector data
+*.cpg
+*.dbf
+*.prj
+*.qpj
+*.sbn
+*.sbx
+*.shp*
+*.shx
+*.gpkg*
+# Raster data
+*.tif
+*.nc
+# Misc
+*.zip
+# dask
+*dask-worker-space*
+# jupyter
+*.ipynb_checkpoints*
+# nohup
+*nohup.out
+# qmd
+*.html
+# specific files - please add paths as needed
