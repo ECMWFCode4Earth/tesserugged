@@ -34,6 +34,10 @@ striptease <- function(fit) {
     fit
 }
 
+reshape_results <- function(x, dat) {
+    aperm(array(unlist(x), dim = dim(dat)[c(3, 2, 1)]), c(3, 2, 1))
+}
+
 # main
 
 dothis <- function(lead_time) {
@@ -79,10 +83,6 @@ dothis <- function(lead_time) {
         log_info("Models fittet and saved to disk.")
 
         # fill predicted mu and sd to stars object
-        reshape_results <- function(x) {
-            aperm(array(unlist(x), dim = dim(dat)[c(3, 2, 1)]), c(3, 2, 1))
-        }
-        
         log_info("Predict mu and sd from climatology models.")
         prediction <- dat[0] #initialize empty stars object with same coordinates as dat
         prediction$mu_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "location"), .progress = interactive()))
