@@ -25,6 +25,16 @@ library(logger)
 # library(furrr)
 # plan(multicore, workers = 8)
 
+# helpers
+
+striptease <- function(fit) {
+    # reduce object size of stored models
+    attr(fit$terms$location, '.Environment') <- attr(fit$terms$scale, '.Environment') <- attr(fit$terms$full, '.Environment') <- NULL
+    fit$residuals <- fit$fitted.values <- fit$model <- fit$link$scale$dmu.deta <- fit$control$start <- fit$formula <- NULL
+    fit
+}
+
+# main
 
 dothis <- function(lead_time) {
     tryCatch(
@@ -61,9 +71,9 @@ dothis <- function(lead_time) {
         # fit model per pixel
         log_info("Start fit of climatology models.")
         mdls <- mdls |> 
-            mutate(mdl = map2(i, j, ~crch(dat[[1]][.x, .y, ] ~ sin1 + cos1 + sin2 + cos2 + trend | 
+            mutate(mdl = map2(i, j, ~striptease(crch(dat[[1]][.x, .y, ] ~ sin1 + cos1 + sin2 + cos2 + trend | 
                             sin1 + cos1 + sin2 + cos2 + trend, data = predictors,
-                            dist = 'gaussian'), .progress = interactive()))
+                            dist = 'gaussian'), .progress = interactive())))
 
         saveRDS(mdls, here(glue("dat/CLIMATOLOGY/t2m_era5_{lead_time}_climatology-models.rds"))) # TODO: this takes quite some time (and space on disk), probably its better to only store coefficients instead of whole models
         log_info("Models fittet and saved to disk.")
