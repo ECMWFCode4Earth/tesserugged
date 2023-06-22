@@ -25,6 +25,12 @@ library(logger)
 # library(furrr)
 # plan(multicore, workers = 8)
 
+# write selected datasets provided as commandline arguments to object, calculate for both ERA5 and CERRA if none are provided
+datasets <- commandArgs(trailingOnly = TRUE)
+if (length(datasets) == 0) {
+  datasets <- c("ERA5", "CERRA")
+}
+
 # helpers
 
 striptease <- function(fit) {
@@ -40,7 +46,7 @@ reshape_results <- function(x, dat) {
 
 # main
 
-dothis <- function(lead_time) {
+dothis <- function(lead_time, dataset) {
     tryCatch(
     {
 
@@ -48,7 +54,7 @@ dothis <- function(lead_time) {
         lead_time <- str_pad(lead_time, 2, pad = "0")
 
         # load data
-        dat <- read_stars(here(glue("dat/PREPROCESSED/ERA5/t2m_era5_{lead_time}.nc")), proxy = FALSE) %>%
+        dat <- read_stars(here(glue("dat/PREPROCESSED/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}.nc")), proxy = FALSE) %>%
             units::drop_units()
         log_info("Data loaded.")
 
@@ -77,25 +83,25 @@ dothis <- function(lead_time) {
         mdls <- mdls |> 
             mutate(mdl = map2(i, j, ~striptease(crch(dat[[1]][.x, .y, ] ~ sin1 + cos1 + sin2 + cos2 + trend | 
                             sin1 + cos1 + sin2 + cos2 + trend, data = predictors,
-                            dist = 'gaussian'), .progress = interactive())))
+                            dist = 'gaussian')), .progress = interactive()))
 
-        saveRDS(mdls, here(glue("dat/CLIMATOLOGY/t2m_era5_{lead_time}_climatology-models.rds"))) # TODO: this takes quite some time (and space on disk), probably its better to only store coefficients instead of whole models
+        saveRDS(mdls, here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/models/t2m_{tolower(dataset)}_{lead_time}_climatology-models.rds"))) # TODO: this takes quite some time (and space on disk), probably its better to only store coefficients instead of whole models
         log_info("Models fittet and saved to disk.")
 
         # fill predicted mu and sd to stars object
         log_info("Predict mu and sd from climatology models.")
         prediction <- dat[0] #initialize empty stars object with same coordinates as dat
-        prediction$mu_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "location"), .progress = interactive()))
-        prediction$sd_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "scale"), .progress = interactive()))
+        prediction$mu_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "location"), .progress = interactive()), dat)
+        prediction$sd_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "scale"), .progress = interactive()), dat)
 
-        write_stars_ncdf(prediction[1], here(glue("dat/CLIMATOLOGY/ERA5/t2m_era5_{lead_time}_mu-prediction.nc")))
-        write_stars_ncdf(prediction[2], here(glue("dat/CLIMATOLOGY/ERA5/t2m_era5_{lead_time}_sd-prediction.nc")))
+        write_stars_ncdf(prediction[1], here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_mu-prediction.nc")))
+        write_stars_ncdf(prediction[2], here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_sd-prediction.nc")))
         log_info("Predicted mu and sd, based on climatology model, saved to disk.")
 
         
         # calculate residuals
         residuals <- (dat - prediction["mu_modeled"]) / prediction["sd_modeled"]
-        write_stars_ncdf(residuals, here(glue("dat/RESIDUALS/ERA5/t2m_era5_{lead_time}_residuals.nc")))
+        write_stars_ncdf(residuals, here(glue("dat/RESIDUALS/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}_residuals.nc")))
         log_info("Residuals saved to disk.")
 
         log_info("Calculation for lead time {lead_time} was successful.")
@@ -103,7 +109,11 @@ dothis <- function(lead_time) {
         error = function(e) {log_error("Calculation of climatology and residuals for lead time {lead_time} failed: "); print(e)}
     )}
 
-log_info("START iterations to calculate climatologies and residuals from ERA5 data.")
-lead_times <- seq(0, 21, by = 3)
-walk(lead_times, dothis)
-log_info("END iterations to calculate climatologies and residuals from ERA5 data.")
+doall_dataset <- function(dataset) {
+    log_info("START iterations to calculate climatologies and residuals from {toupper(dataset)} data.")
+    lead_times <- seq(0, 21, by = 3)
+    walk(lead_times, dothis, dataset = dataset)
+    log_info("END iterations to calculate climatologies and residuals from {toupper(dataset)} data.")
+}
+
+walk(datasets, doall_dataset)
