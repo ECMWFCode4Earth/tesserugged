@@ -94,6 +94,7 @@ dothis <- function(lead_time, dataset) {
         prediction$mu_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "location"), .progress = interactive()), dat)
         prediction$sd_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "scale"), .progress = interactive()), dat)
 
+        st_crs(prediction) <- 4326
         write_stars_ncdf(prediction[1], here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_mu-prediction.nc")))
         write_stars_ncdf(prediction[2], here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_sd-prediction.nc")))
         log_info("Predicted mu and sd, based on climatology model, saved to disk.")
@@ -101,6 +102,7 @@ dothis <- function(lead_time, dataset) {
         
         # calculate residuals
         residuals <- (dat - prediction["mu_modeled"]) / prediction["sd_modeled"]
+        st_crs(residuals) <- 4326
         write_stars_ncdf(residuals, here(glue("dat/RESIDUALS/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}_residuals.nc")))
         log_info("Residuals saved to disk.")
 
