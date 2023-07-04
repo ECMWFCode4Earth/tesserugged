@@ -40,7 +40,7 @@ striptease <- function(fit) {
 }
 
 # load residuals for training data (ERA5 already regridded)
-dothis <- function(lead_time, sample_frac = 0.15) {
+dothis <- function(lead_time, sample_frac = 0.1) {
     lead_time <- str_pad(lead_time, 2, pad = "0")
 
     log_info("load data for lead time {lead_time}")
