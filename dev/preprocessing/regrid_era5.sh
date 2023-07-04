@@ -13,7 +13,7 @@
 projectroot=$(git rev-parse --show-toplevel)
 
 # Declare a string array with type
-declare -a leadtime=( "00" "03" "06" "09" "12" "18" "21" )
+declare -a leadtime=( "00" "03" "06" "09" "12" "15" "18" "21" )
 
 for lt in "${leadtime[@]}"; do
     echo "lead time ${lt}"
