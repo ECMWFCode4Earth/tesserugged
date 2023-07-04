@@ -54,7 +54,7 @@ dothis <- function(lead_time, dataset) {
         lead_time <- str_pad(lead_time, 2, pad = "0")
 
         # load data
-        dat <- read_stars(here(glue("dat/PREPROCESSED/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}.nc")), proxy = FALSE) %>%
+        dat <- read_stars(here(glue("dat/TRAINING/PREPROCESSED/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}.nc")), proxy = FALSE) %>%
             units::drop_units()
         log_info("Data loaded.")
 
@@ -85,7 +85,7 @@ dothis <- function(lead_time, dataset) {
                             sin1 + cos1 + sin2 + cos2 + trend, data = predictors,
                             dist = 'gaussian')), .progress = interactive()))
 
-        saveRDS(mdls, here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/models/t2m_{tolower(dataset)}_{lead_time}_climatology-models.rds"))) # TODO: this takes quite some time (and space on disk), probably its better to only store coefficients instead of whole models
+        saveRDS(mdls, here(glue("dat/TRAINING/CLIMATOLOGY/{toupper(dataset)}/models/t2m_{tolower(dataset)}_{lead_time}_climatology-models.rds"))) # TODO: this takes quite some time (and space on disk), probably its better to only store coefficients instead of whole models
         log_info("Models fittet and saved to disk.")
 
         # fill predicted mu and sd to stars object
@@ -95,15 +95,15 @@ dothis <- function(lead_time, dataset) {
         prediction$sd_modeled <- reshape_results(map(mdls$mdl, ~predict(.x, newdata = predictors, type = "scale"), .progress = interactive()), dat)
 
         st_crs(prediction) <- 4326
-        write_stars_ncdf(prediction[1], here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_mu-prediction.nc")))
-        write_stars_ncdf(prediction[2], here(glue("dat/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_sd-prediction.nc")))
+        write_stars_ncdf(prediction[1], here(glue("dat/TRAINING/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_mu-prediction.nc")))
+        write_stars_ncdf(prediction[2], here(glue("dat/TRAINING/CLIMATOLOGY/{toupper(dataset)}/predictions/t2m_{tolower(dataset)}_{lead_time}_sd-prediction.nc")))
         log_info("Predicted mu and sd, based on climatology model, saved to disk.")
 
         
         # calculate residuals
         residuals <- (dat - prediction["mu_modeled"]) / prediction["sd_modeled"]
         st_crs(residuals) <- 4326
-        write_stars_ncdf(residuals, here(glue("dat/RESIDUALS/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}_residuals.nc")))
+        write_stars_ncdf(residuals, here(glue("dat/TRAINING/RESIDUALS/{toupper(dataset)}/t2m_{tolower(dataset)}_{lead_time}_residuals.nc")))
         log_info("Residuals saved to disk.")
 
         log_info("Calculation for lead time {lead_time} was successful.")

@@ -19,7 +19,7 @@ for lt in "${leadtime[@]}"; do
     echo "lead time ${lt}"
     rm /tmp/targetgrid.txt
     # create descriptor file for target grid
-    stdbuf -oL cdo griddes dat/RESIDUALS/CERRA/t2m_cerra_${lt}_residuals.nc > /tmp/targetgrid.txt
+    stdbuf -oL cdo griddes dat/TRAINING/RESIDUALS/CERRA/t2m_cerra_${lt}_residuals.nc > /tmp/targetgrid.txt
     # bilinear interpolation
-    cdo remapbil,/tmp/targetgrid.txt ${projectroot}/dat/RESIDUALS/ERA5/t2m_era5_${lt}_residuals.nc ${projectroot}/dat/RESIDUALS/ERA5_regridded/t2m_era5_${lt}_residuals.nc
+    cdo remapbil,/tmp/targetgrid.txt ${projectroot}/dat/TRAINING/RESIDUALS/ERA5/t2m_era5_${lt}_residuals.nc ${projectroot}/dat/TRAINING/RESIDUALS/ERA5_regridded/t2m_era5_${lt}_residuals.nc
 done 

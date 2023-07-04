@@ -17,7 +17,7 @@ library(crch)
 library(logger)
 
 # land sea mask 
-lsm <- read_stars(here( "dat/PREPROCESSED/cerra_lsm.nc"), sub = "lsm")
+lsm <- read_stars(here( "dat/TRAINING/PREPROCESSED/cerra_lsm.nc"), sub = "lsm")
 lsm <- as_tibble(lsm) %>%
     mutate(lsm = as.logical(lsm)) %>% # encode as logical, TRUE when land
     select(-time) %>%
@@ -44,8 +44,8 @@ dothis <- function(lead_time, sample_frac = 0.1) {
     lead_time <- str_pad(lead_time, 2, pad = "0")
 
     log_info("load data for lead time {lead_time}")
-    era5 <- fix_attributes(read_stars(here(glue("dat/RESIDUALS/ERA5_regridded/t2m_era5_{lead_time}_residuals.nc")), proxy = FALSE))
-    cerra <- fix_attributes(read_stars(here(glue("dat/RESIDUALS/CERRA/t2m_cerra_{lead_time}_residuals.nc")), proxy = FALSE))
+    era5 <- fix_attributes(read_stars(here(glue("dat/TRAINING/RESIDUALS/ERA5_regridded/t2m_era5_{lead_time}_residuals.nc")), proxy = FALSE))
+    cerra <- fix_attributes(read_stars(here(glue("dat/TRAINING/RESIDUALS/CERRA/t2m_cerra_{lead_time}_residuals.nc")), proxy = FALSE))
 
     st_crs(era5) <- st_crs(cerra)
 
@@ -67,7 +67,7 @@ dothis <- function(lead_time, sample_frac = 0.1) {
     log_info("fit model on {nrow(modeldat)} observations.")
     fit <- striptease(crch(cerra ~ era5 * lsm | era5 * lsm, data = modeldat)) # does not work for full data due to memory issues
     log_info("save model to disk.")
-    write_rds(fit, here(glue("dat/SAMOS/models/samos-model_{lead_time}.rds")))
+    write_rds(fit, here(glue("dat/TRAINING/SAMOS/models/samos-model_{lead_time}.rds")))
 
 }
 
