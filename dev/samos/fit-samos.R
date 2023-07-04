@@ -67,7 +67,7 @@ dothis <- function(lead_time, sample_frac = 0.15) {
     log_info("fit model on {nrow(modeldat)} observations.")
     fit <- striptease(crch(cerra ~ era5 * lsm | era5 * lsm, data = modeldat)) # does not work for full data due to memory issues
     log_info("save model to disk.")
-    write_rds(fit, here(glue("dat/SAMOS/samos-model_{lead_time}.rds")))
+    write_rds(fit, here(glue("dat/SAMOS/models/samos-model_{lead_time}.rds")))
 
 }
 
