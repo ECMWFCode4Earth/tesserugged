@@ -51,6 +51,7 @@ dothis <- function(lead_time) {
             left_join(lsm, by = join_by(x, y))
 
         out <- dat[0]
+        st_crs(out) <- 4326
         out$mu_samos <- reshape_results(predict(mdl, newdata = newdat, type = "location"), out)
         out$sd_samos <- reshape_results(predict(mdl, newdata = newdat, type = "scale"), out)
 
