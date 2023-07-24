@@ -8,7 +8,7 @@
 
 # use from the commandline as follows: first argument is a path stump (path with lead time parametrized as "{lead_time}") for modelled residuals, second argument a path stump for the output (again, parametrize lead time), third argument ist the variable name as contained within the modelled residuals to be used
 # for samos the call would look like this:
-# ./dev/postprocessing/reapply_anomaly.R "dat/TESTING/SAMOS/predictions/samos-predictions_{lead_time}.nc" "dat/TESTING/SAMOS/postprocessed/samos-postprocessed_{lead_time}.nc" "mu_samos"
+# ./dev/postprocessing/reapply_climatology.R "dat/TESTING/SAMOS/predictions/samos-predictions_{lead_time}.nc" "dat/TESTING/SAMOS/postprocessed/samos-postprocessed_{lead_time}.nc" "mu_samos"
 
 library(stars)
 library(here)
