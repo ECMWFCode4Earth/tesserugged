@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 
 ##################################################################
@@ -10,10 +9,12 @@
 if [ $HOSTNAME = "matt1.novalocal" ]
 then
     echo "You obviously work on the weather cloud. Links are set to /data"
+    rm dat/TRAINING dat/TESTING
     ln -s /data/TRAINING dat/TRAINING
     ln -s /data/TESTING dat/TESTING
 else
     echo "You obviously work on a local machine. Links are set to the SSEA share."
+    rm dat/TRAINING dat/TESTING
     ln -s /ssea/SSEA/C4E/DATA/TRAINING dat/TRAINING
     ln -s /ssea/SSEA/C4E/DATA/TESTING dat/TESTING
 fi

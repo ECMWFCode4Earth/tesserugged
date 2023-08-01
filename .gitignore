@@ -42,3 +42,4 @@ __pycache__/
 # qmd
 *.html
 # specific files - please add paths as needed
+dat/*
