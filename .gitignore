@@ -43,3 +43,4 @@ __pycache__/
 *.html
 # specific files - please add paths as needed
 dat/*
+.vscode
