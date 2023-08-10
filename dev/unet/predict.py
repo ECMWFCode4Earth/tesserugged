@@ -43,7 +43,7 @@ import utils as ut
 
 
 ################################################################################
-def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,cropbox,unet_name,datasource,file_topo, files_temperature, input_shape, z_branch, batch_size,normsource,normalise,leadtime):
+def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,cropbox,unet_name,datasource,file_topo, files_temperature, input_shape, z_branch):
     '''
     21.06.2023, I. Schicker
     # Perform prediction using the loaded model
@@ -54,7 +54,7 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
 
     # Load the saved model
     loaded_model = tf.keras.models.load_model(modelpath)  
-    print(loaded_model.summary())
+    #print(loaded_model.summary())
     #visualkeras.layered_view(loaded_model, legend=True, to_file='Modelsetup_'+unet_name+'.png').show()
     
     ## Preprocess the data
@@ -62,47 +62,15 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
     #if type(inputlist) != list:
     predict_data_path_list = inputlist #.values.flatten()
     print(predict_data_path_list)
-    print(len(predict_data_path_list))
-    print(batch_size)
-    
     ##loading topography data and add time dimension
     lowtopo = ut.topography_lsm(lowtfile, cropbox, crop=True)
     hightopo = ut.topography_lsm(hightfile, cropbox, crop=True)
     lowlsm = ut.topography_lsm(lowlsmfile, cropbox, crop=True)
     highlsm = ut.topography_lsm(highlsmfile, cropbox, crop=True)
-   
-    ## Prepare, just in case, the feature and target "climate" files in case we need to normalize.
-    ## hopefully saves resources in batching
-    ##data path min and max in normsource
-    feature_min = xr.open_dataset(normsource[0]).isel(time=0)
-    feature_max = xr.open_dataset(normsource[1]).isel(time=0)
-    ##drop bounds here!
-    feature_min = feature_min.drop_vars('time_bnds')
-    feature_max = feature_max.drop_vars('time_bnds')
     
-    ##crop to domain, target
-    if 'latitude' not in list(feature_min.coords.keys()):
-        #print('Renaming coordinates to longitude and latitude')
-        ##MIND: expects dimensions to be (time,lat,lon) in the coords list!!
-        feature_min = feature_min.rename({list(feature_min.coords.keys())[1]:'longitude',list(feature_min.coords.keys())[2]:'latitude'})
-        feature_max = feature_max.rename({list(feature_max.coords.keys())[1]:'longitude',list(feature_max.coords.keys())[2]:'latitude'})
-
-    if datasource != 'residuals':
-        feature_min = feature_min.sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))
-        feature_max = feature_max.sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))
-
-    if 'time' in list(feature_min.coords.keys()):
-        feature_min = feature_min.drop('time')
-        feature_max = feature_max.drop('time')
-
-    if 'crs' in list(feature_min.keys()):
-        feature_min = feature_min.drop('crs')
-        feature_max = feature_max.drop('crs')
-    
-    normsource = [feature_min, feature_max]
     ##get time array_
     #data_ds = xr.open_mfdataset(predict_data_path_list)
-    print(batch_size)
+
     
     if unet_name == 'unet_model_small_window':
         # Set the window size
@@ -110,7 +78,7 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
         stride = (4,4)
         
         # Generate sub-windows from the input data for prediction
-        generator = gen.batch_generator_2_prediction(predict_data_path_list, [lowtopo,hightopo], [lowlsm, highlsm],len(predict_data_path_list),cropbox,window_size,stride)
+        generator = gen.batch_generator_2_prediction(predict_data_path_list, [lowtopo,hightopo], [lowlsm, highlsm],cropbox,window_size,stride)
         print(generator)
         # Predict for each sub-window
         predictions = []
@@ -164,48 +132,34 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
         
         '''
         # Generate sub-windows from the input data for prediction
-        generator = gen.batch_generator_predict(predict_data_path_list, [lowtopo,hightopo], [lowlsm, highlsm],len(predict_data_path_list), batch_size, cropbox, input_shape,normsource,normalise)
+        generator = gen.batch_generator_predict(predict_data_path_list, [lowtopo,hightopo], [lowlsm, highlsm],num_samples, batch_size, cropbox, input_shape)
         print(generator)
 
         predictions = []
-        i = 0
         for batch in generator:    
-            ##HACKY as hell right now............                    
-            print(i)
-            print(batch)
-            
-            ###ANOTHER HACK: we have the following params:   t2m, oro_low, orog_normalized,lsm_low, lsm
-
-            data = np.concatenate([batch['t2m'].values[..., np.newaxis], batch['oro_low'].values[..., np.newaxis],
-                                    batch['orog_normalized'].values[..., np.newaxis], batch['lsm_low'].values[..., np.newaxis],
-                                    batch['lsm'].values[..., np.newaxis]], axis=-1)
-
             ## Make prediction using the loaded model
             prediction = loaded_model.predict(data)
     
             print(prediction.shape)
-            #print(prediction)
-            #print(data)
-            
-            ##transform to xarray
+    
+           ##transform to xarray
             # create dataset
             # define data with variable attributes
             ##DONE in utils.py
-            predictions_ds = ut.predict_2_xarray(prediction, batch,z_branch, unet_name)            
+            predictions_ds = ut.predict_2_xarray(prediction, sub_window,z_branch, unet_name)            
 
             if datasource == 'minmaxnorm':
                 #### Now de-normalize temperature and topography
                 predictions_ds_denorm = ut.denormalize_predictions(predictions_ds,file_topo, files_temperature)
                 ##close non-necessary files
                 predictions_ds.close()
-                print('#########################PREDICTION################################')
                 print(predictions_ds_denorm)
             elif datasource == 'residuals':
                 ##########RESIDUALS DENORM:
                 ##fc * cerrs.sd + cerra.mu
                 ##TBD!!
                 print('TBD')
-            i += 1
+
         ##########RESIDUALS DENORM:
         ##fc * cerrs.sd + cerra.mu
 
@@ -232,11 +186,6 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
 
         predictions = []
         for batch in generator:    
-            ##the generator gives xarrays ... so we need to transform it to the needed input structure, np.array
-            data = batch.to_array().to_numpy()
-            print(data.shape)
-
-
             ## Make prediction using the loaded model
             prediction = loaded_model.predict(batch)
     
@@ -246,28 +195,42 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
             # create dataset
             # define data with variable attributes
             ##DONE in utils.py
-            predictions_ds = ut.predict_2_xarray(prediction, batch,z_branch, unet_name)
+            predictions_ds = ut.predict_2_xarray(prediction, sub_window,z_branch, unet_name)
             
             #### Now de-normalize temperature and topography
             print(file_topo)
             print(files_temperature)
-            
-            #### Now de-normalize temperature and topography
-            predictions_ds_denorm = ut.denormalize_predictions(predictions_ds,file_topo, files_temperature)
-            
-            ##close non-necessary files
-            predictions_ds.close()
-            print(predictions_ds_denorm)
-            
+            if datasource == 'minmaxnorm':
+                #### Now de-normalize temperature and topography
+                predictions_ds_denorm = ut.denormalize_predictions(predictions_ds,file_topo, files_temperature)
+                ##close non-necessary files
+                predictions_ds.close()
+                print(predictions_ds_denorm)
+            elif datasource == 'residuals':
+                ##########RESIDUALS DENORM:
+                ##fc * cerrs.sd + cerra.mu
+                ##TBD!
+                print('TBD')
             
             predictions.append(predictions_ds_denorm)
 
 
 
-        ##########CONCAT predictions
-        prediction_all = xr.merge(predictions)
-        prediction_all.to_netcdf('./PRED/Prediction_'+unet_name+'_'+str(leadtime)+'.nc')
-        
+        ##########RESIDUALS DENORM:
+        ##fc * cerrs.sd + cerra.mu
+    
+    ##convert to xarray and denormalize. Needs path to xmin and xmax files
+    # Create dummy coordinates for time, latitude, and longitude
+    #time_coords = np.arange(predictions.shape[0])  # Assuming predictions.shape[0] represents the number of sub-windows
+    #lat_coords = np.arange(start_latitude, end_latitude, lat_resolution)  # Replace start_latitude, end_latitude, and lat_resolution with the actual values
+    #lon_coords = np.arange(start_longitude, end_longitude, lon_resolution)  # Replace start_longitude, end_longitude, and lon_resolution with the actual values
+
+    #prediction = predictions
+    
+    ##denorm:
+    #xmin = xr.open_dataset(xminpath)
+    #xmax = xr.open_dataset(xmaxpath)
+    #predictions_normal = ut.denormalize(prediction, xmin,xmax)
         
 
     
@@ -276,4 +239,3 @@ def predict(inputlist,modelpath,lowtfile, hightfile, lowlsmfile,highlsmfile,crop
     hightopo.close()
 
     #return predictions
-

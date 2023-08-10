@@ -5,9 +5,7 @@ Generator for downscaling of ERA5 2m temperature to CERRA using a UNET for the C
 
 History:
 - 21.06.2023, I. Schicker: split the test code into separate function files. 
-- 07.07.2023, I. Schicker: major refactoring, added another generator, also generator for prediction part
-- 12.07.2023, I. Schicker: changing the generator for the RESIDUALS part for the cloud, adding switch for 
-                           on-the-fly normalization of the residuals
+
 '''
 
 import os
@@ -19,9 +17,6 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow.keras import layers
 
-import utils as ut
-from scipy.interpolate import NearestNDInterpolator
-
 # Set the seed for reproducibility
 seed = 123
 ##check which tensorflow version
@@ -32,7 +27,7 @@ else:
 
 
 ######################################GENERATOR#################################
-def batch_generator(data_path, label_path, terrain_features,lsm_features, num_samples, batch_size, cropbox, input_shape,z_branch,normalize,normsource):
+def batch_generator(data_path, label_path, terrain_features,lsm_features, num_samples, batch_size, cropbox, input_shape,z_branch):
     '''
     21.06.2023, I. Schicker
     
@@ -45,96 +40,57 @@ def batch_generator(data_path, label_path, terrain_features,lsm_features, num_sa
                            Here, these are the to latlon converted CERRA files. 
       - terrain_features = low resolution ERA5 topography and high resolution CERRA topography [lowres, highres]
                            Xarray data sets.
-      - lsm_features     = low res and high res land-sea mask 
       - num_samples      = number of overall samples in the training/validation data set. 3hourly*days_per_year*years
       - batch_size       = the batch_size used in the training process.
       - window_size      = and another splitting of the data to fit it into memory, splitting time
       - input_shape      = size of the target domain we defined before.
       - z_branch         = if we use the highres topo as additional target
-      - normalize        = do we need to normalize the data? esp for residuals and cloud
-      - normsource       = residuals or "real", [minfile path feature, maxfile path feature, minfilepath target, maxfilepath target]
 
     Input data in the paths are expected to be netcdf files.
     
+    IF adding lsm as additional input feature, make some minor adaptations below.
     '''
     
 
     while True:
         ## Pre-load the terrain data as they do not have a time dimension
+
         lowtopo = terrain_features[0]
         hightopo = terrain_features[1]
         lowlsm = lsm_features[0]
         highlsm = lsm_features[1]        
-        
-        lowtopo = lowtopo.rename({'orog_normalized':'orogl_normalized'})
-        lowlsm = lowlsm.rename({'lsm':'lsml'})
-
-        #print(lowtopo)
-        #print(hightopo)
-        #print(lowlsm)
-        #print(highlsm)
-        
-
-        feature_min = normsource[0]
-        feature_max = normsource[1]
-        target_min = normsource[2]
-        target_max = normsource[3]
-        
-        print(type(data_path))
-        
+ 
         for offset in range(0, num_samples, batch_size):
-            #print(offset,num_samples,batch_size, offset + batch_size)
             
             ##We check what type our data_path is
             ## - if it is an xarray data set we use the xarray batching directly
             ##   also, no need for cropping if it is xarray as then we use, for this C4E challenge, the residuals which are already cropped
             ## - if it is a list, we use first list subsetting, then open the subsetted list
-            if type(data_path) != list:
+            if type(data_path) != 'list':
                 
                 data_ds_cropp = data_path.isel(time=slice(offset,offset + batch_size))
                 label_ds_cropp = label_path.isel(time=slice(offset,offset + batch_size))
-                label_ds_cropp = label_ds_cropp.rename({list(label_ds_cropp.keys())[0]:'target'})       
-                #print(label_ds_cropp['latitude'].values)
                 
                 if 'latitude' not in list(data_ds_cropp.coords.keys()):
                     #print('Renaming coordinates to longitude and latitude')
-                    ##MIND: expects dimensions to be (lon,lat,time) in the coords list for data_ds and (lon,lat,time) for label_ds!
-                    data_ds_cropp = data_ds_cropp.rename({list(data_ds_cropp.coords.keys())[0]:'longitude',list(data_ds_cropp.coords.keys())[1]:'latitude'})
+                    ##MIND: expects dimensions to be (time,lon,lat) in the coords list for data_ds and (lon,lat,time) for label_ds!!
+                    data_ds_cropp = data_ds_cropp.rename({list(data_ds_cropp.coords.keys())[1]:'longitude',list(data_ds_cropp.coords.keys())[2]:'latitude'})
                     label_ds_cropp = label_ds_cropp.rename({list(label_ds_cropp.coords.keys())[0]:'longitude',list(label_ds_cropp.coords.keys())[1]:'latitude'})
                 
                 ##check size of domain, if larger then we need to cropp using the cropbox
                 if data_ds_cropp.sizes['latitude'] > input_shape[0] or data_ds_cropp.sizes['longitude'] > input_shape[1]:
                     data_ds_cropp = data_ds_cropp.sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))
                     label_ds_cropp = label_ds_cropp.sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))                
-                #print(data_ds_cropp['latitude'].values)
-                #print(label_ds_cropp)
-                #exit()
+                
 
-            elif type(data_path) == list:
-                print('\n')
-                print('#####################READING LIST####################')
-                print('\n')
+            elif type(data_path) == 'list':
                 ##get the filenames corresponding to the offset range
-                print(data_path[offset:offset + batch_size])
-                print(label_path[offset:offset + batch_size])
-                
-                data_path_list = data_path[offset:offset + batch_size] #.values.flatten()
-                label_path_list = label_path[offset:offset + batch_size] #.values.flatten()
-                
+                data_path_list = data_path[offset:offset + batch_size].values.flatten()
+                label_path_list = label_path[offset:offset + batch_size].values.flatten()
                 
                 ##read the meteorological parameter input feature and the target
                 data_ds = xr.open_mfdataset(data_path_list)
                 label_ds = xr.open_mfdataset(label_path_list)
-                label_ds = label_ds.rename({'t2m':'target'})
-                ##ATTENTION: on cloud we need to interpolate the data!! First check is resolution
-                #print(data_ds)
-                
-                resolution = data_ds['longitude'][1].values - data_ds['longitude'][0].values
-                #print(resolution)
-                if resolution > 0.05:
-                    ##interpolate:
-                    data_ds = data_ds.interp(latitude=label_ds.latitude.data,longitude=label_ds.longitude.data)
-                #print(data_ds)
                 
                 ##ATTENTION!!! We decided, as proposed by the spanish team, to use a smaller domain for testing purposes
                 ## cropping here to the smaller domain
@@ -143,100 +99,50 @@ def batch_generator(data_path, label_path, terrain_features,lsm_features, num_sa
                 ## get rid of the big data set
                 data_ds = None
                 label_ds = None
-            #print('############# in batch_generator, printing data_ds')
-            #print(data_ds_cropp)
-            #print(label_ds_cropp)
-
-
-            ##Do we need to normalize the data?
-            ##On cloud yes, at "home" no
-            if normalize:
-                
-                parameterfeature = list(data_ds_cropp.keys())[0]
-                parametertarget = list(label_ds_cropp.keys())[0]
-                
-                #print('##################NORMDATA#############')
-                #print('#######################################')
-                data_ds_cropp = ut.normalize(data_ds_cropp[parameterfeature],feature_min,feature_max) #.to_dataset(name=parameterfeature)
-                label_ds_cropp = ut.normalize(label_ds_cropp[parametertarget],target_min,target_max) #.to_dataset(name=parametertarget)
-                parametertarget = list(label_ds_cropp.keys())[0]
-                
-            label_ds_cropp = label_ds_cropp.rename({parametertarget:'target'})
-                
-            print('###################Normalized################')
-            #exit()
-            #print(data_ds_cropp)
-            #print(label_ds_cropp)
-            #label_ds_cropp = label_ds_cropp.rename({'t2m':'target'}) 
+            
             # Expand the topography and lsm using the time dimension in the input feature data set
             lowtopo_time = lowtopo.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3])) #.squeeze()
             hightopo_time = hightopo.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))#.squeeze()
             lowlsm_time = lowlsm.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))#.squeeze()
             highlsm_time = highlsm.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))#.squeeze()
-            
-            ##MERGE static fields
-            #static = xr.merge([lowtopo_time,hightopo_time,lowlsm_time,highlsm_time])
-            
-            ##get rid of NaNs in the interpolated ERA5 residuals:
-            data = data_ds_cropp[list(data_ds_cropp.keys())[0]].compute().to_numpy()
-            mask = np.where(~np.isnan(data))
-            interp = NearestNDInterpolator(np.transpose(mask), data[mask])
-            filled_data = interp(*np.indices(data.shape))
-            param = list(data_ds_cropp.keys())[0]
-            
-            
-            ##back to xarray
-            filled_data = xr.Dataset(data_vars = dict(t2m_era5 = (["time","latitude","longitude"], filled_data)),
-                        coords = dict(
-                        latitude = (["latitude"], data_ds_cropp.latitude.values),
-                        longitude = (["longitude"], data_ds_cropp.longitude.values),
-                        time = (["time"],data_ds_cropp.time.values)))
-            
-            ##for checking if generator does what it should
-            print(filled_data)
+           
+
             ## Merge input fields with batch_data
             ##first, get the names:
-            parameterdata = list(filled_data.keys())[0]
-            
+            parameterdata = list(data_ds_cropp.keys())[0]
             parameterltopo = list(lowtopo_time.keys())[0]
             parameterhtopo = list(hightopo_time.keys())[0]
             parameterllsm = list(lowlsm_time.keys())[0]           
             parameterhlsm = list(highlsm_time.keys())[0]
             
+            
 
             # Merge input fields with batch_data
-            data = np.concatenate([filled_data[parameterdata].values[..., np.newaxis], lowtopo_time[parameterltopo].values[..., np.newaxis],
+            data = np.concatenate([data_ds_cropp[parameterdata].values[..., np.newaxis], lowtopo_time[parameterltopo].values[..., np.newaxis],
                                     hightopo_time[parameterhtopo].values[..., np.newaxis], lowlsm_time[parameterllsm].values[..., np.newaxis],
-                                    highlsm_time[parameterhlsm].values[..., np.newaxis]], axis=-1)                              
-
+                                    highlsm_time[parameterhlsm].values[..., np.newaxis]], axis=-1)            
+            
             ##Now do the same for target data
             parametertarget = list(label_ds_cropp.keys())[0]
-                       
+            if z_branch:
+                label = np.concatenate([label_ds_cropp[parametertarget].values[..., np.newaxis], hightopo_time[parameterhtopo].values[..., np.newaxis]],
+                                    axis=-1)
+            else:       
+                label = label_ds_cropp[parametertarget].values
+            
+            #print(data)
+            #print(label)
+            print(data.shape)
+            print(label.shape)
+            
             ##removing the time-based topography to avoid errors            
-            #hightopo_time = None
+            hightopo_time = None
             lowtopo_time = None
             highlsm_time = None
             lowlsm_time = None            
-            data_ds_cropp = None
-            #label_ds_cropp = None            
             
-            if z_branch:
-                              
-                tardata = np.concatenate([label_ds_cropp['target'].values[..., np.newaxis], \
-                                          hightopo_time[parameterhtopo].values[..., np.newaxis]], axis=-1)
-                
-                print(data.shape, tardata.shape)
-                
-                yield data,tardata
-                        
-            else:         
-               
-               target = label_ds_cropp[parametertarget].compute().to_numpy()
-               #print(target.shape)
-               #print(data.shape)
-               
-               yield data, target
-            
+            ##yield the data
+            yield data, label
 
 ######################################GENERATOR SLIDING WINDOW#################################
 def batch_generator_2(data_path, label_path, terrain_features, lsm_features,num_samples, batch_size, cropbox, window_size, stride, z_branch):
@@ -488,7 +394,7 @@ def batch_generator_3(data_path, label_path, terrain_features, lsm_features,num_
 
 ######################################################GENERATOR PREDICTION###############################################################
 ######################################GENERATOR#################################
-def batch_generator_predict(data_path, terrain_features,lsm_features, num_samples, batch_size, cropbox, input_shape,normsource, normalize):
+def batch_generator_predict(data_path, terrain_features,lsm_features, num_samples, batch_size, cropbox, input_shape):
     '''
     21.06.2023, I. Schicker
     
@@ -517,10 +423,6 @@ def batch_generator_predict(data_path, terrain_features,lsm_features, num_sample
         hightopo = terrain_features[1]
         lowlsm = lsm_features[0]
         highlsm = lsm_features[1]        
-
-        feature_min = normsource[0]
-        feature_max = normsource[1]
-
  
         for offset in range(0, num_samples, batch_size):
             print(type(data_path))
@@ -537,15 +439,6 @@ def batch_generator_predict(data_path, terrain_features,lsm_features, num_sample
                     ##MIND: expects dimensions to be (time,lon,lat) in the coords list for data_ds and (lon,lat,time) for label_ds!!
                     data_ds_cropp = data_ds_cropp.rename({list(data_ds_cropp.coords.keys())[1]:'longitude',list(data_ds_cropp.coords.keys())[2]:'latitude'})
                 
-                ##ATTENTION: on cloud we need to interpolate the data!! First check is resolution
-                ##MIND: we use the hightopo file specs here for the interpolation!
-                resolution = data_ds_cropp['longitude'][1].values - data_ds_cropp['longitude'][0].values
-                #print(resolution)
-                if resolution > 0.005:
-                    ##interpolate:
-                    data_ds_cropp = data_ds_cropp.interp(latitude=hightopo.latitude.data,longitude=hightopo.longitude.data)
-                print(data_ds_cropp)
-
                 ##check size of domain, if larger then we need to cropp using the cropbox
                 if data_ds_cropp.sizes['latitude'] > input_shape[0] or data_ds_cropp.sizes['longitude'] > input_shape[1]:
                     data_ds_cropp = data_ds_cropp.sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))
@@ -558,48 +451,19 @@ def batch_generator_predict(data_path, terrain_features,lsm_features, num_sample
                 
                 ##read the meteorological parameter input feature and the target
                 data_ds = xr.open_mfdataset(data_path_list)
-                
-                if 'latitude' not in list(data_ds.coords.keys()):
-                    #print('Renaming coordinates to longitude and latitude')
-                    ##MIND: expects dimensions to be (time,lon,lat) in the coords list for data_ds and (lon,lat,time) for label_ds!!
-                    data_ds = data_ds.rename({list(data_ds.coords.keys())[1]:'longitude',list(data_ds.coords.keys())[2]:'latitude'})
-
-                ##ATTENTION: on cloud we need to interpolate the data!! First check is resolution
-                ##MIND: we use the hightopo file specs here for the interpolation!
-                resolution = data_ds['longitude'][1].values - data_ds['longitude'][0].values
-                #print(resolution)
-                if resolution > 0.005:
-                    ##interpolate:
-                    data_ds = data_ds.interp(latitude=hightopo.latitude.data,longitude=hightopo.longitude.data)
-    
-                
+                 
                 ##ATTENTION!!! We decided, as proposed by the spanish team, to use a smaller domain for testing purposes
                 ## cropping here to the smaller domain
                 data_ds_cropp = data_ds.sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))
                 ## get rid of the big data set
                 data_ds = None
-            
-            print(data_ds_cropp)
-            ##Do we need to normalize the data?
-            ##On cloud yes, at "home" no
-            if normalize:
-                parameterfeature = list(data_ds_cropp.keys())[0]
-                
-                print(data_ds_cropp)
-                print(feature_max)
-                data_ds_cropp = ut.normalize(data_ds_cropp[parameterfeature],feature_min,feature_max) #.to_dataset(name=parameterfeature)
-            
 
             # Expand the topography and lsm using the time dimension in the input feature data set
             lowtopo_time = lowtopo.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3])) #.squeeze()
             hightopo_time = hightopo.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))#.squeeze()
             lowlsm_time = lowlsm.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))#.squeeze()
             highlsm_time = highlsm.expand_dims(time=data_ds_cropp.time).sel(latitude=slice(cropbox[0],cropbox[1]), longitude=slice(cropbox[2],cropbox[3]))#.squeeze()
-
-            ##print(rename lowtopo and lowlsm variables)
-            lowtopo_time = lowtopo_time.rename({list(lowtopo_time.keys())[0]:'oro_low'})            
-            lowlsm_time = lowlsm_time.rename({list(lowlsm_time.keys())[0]:'lsm_low'})
-
+           
 
             ## Merge input fields with batch_data
             ##first, get the names:
@@ -609,19 +473,15 @@ def batch_generator_predict(data_path, terrain_features,lsm_features, num_sample
             parameterllsm = list(lowlsm_time.keys())[0]           
             parameterhlsm = list(highlsm_time.keys())[0]
             
-            ##
-
-            # Merge input fields with batch_data, using xr info here as we need it to add time, lat,lon info back to subwindow prediction:
-            data_xr = xr.merge([data_ds_cropp[parameterdata], lowtopo_time[parameterltopo],
-                                            hightopo_time[parameterhtopo], lowlsm_time[parameterllsm],highlsm_time[parameterhlsm]])
-
-
-            #data = np.concatenate([data_ds_cropp[parameterdata].values[..., np.newaxis], lowtopo_time[parameterltopo].values[..., np.newaxis],
-            #                        hightopo_time[parameterhtopo].values[..., np.newaxis], lowlsm_time[parameterllsm].values[..., np.newaxis],
-            #                        highlsm_time[parameterhlsm].values[..., np.newaxis]], axis=-1)            
             
 
-            print(data_xr)
+            # Merge input fields with batch_data
+            data = np.concatenate([data_ds_cropp[parameterdata].values[..., np.newaxis], lowtopo_time[parameterltopo].values[..., np.newaxis],
+                                    hightopo_time[parameterhtopo].values[..., np.newaxis], lowlsm_time[parameterllsm].values[..., np.newaxis],
+                                    highlsm_time[parameterhlsm].values[..., np.newaxis]], axis=-1)            
+            
+
+            print(data.shape)
         
             ##removing the time-based topography to avoid errors            
             hightopo_time = None
@@ -630,7 +490,7 @@ def batch_generator_predict(data_path, terrain_features,lsm_features, num_sample
             lowlsm_time = None            
             
             ##yield the data
-            yield data_xr
+            yield data
 
 ###################################################################################################################################
 def batch_generator_2_prediction(data_path, terrain_features,lsm_features, cropbox, window_size, stride):
@@ -736,5 +596,4 @@ def batch_generator_2_prediction(data_path, terrain_features,lsm_features, cropb
             
             # Close the data file
             data_ds.close()
-
 

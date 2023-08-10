@@ -79,4 +79,3 @@ class InverselyWeightedMSE(Loss):
         weighted_mse = tf.reduce_mean(tf.multiply(tf.square(y_true - y_pred), weights))  # Apply weights to MSE
  
         return weighted_mse
-

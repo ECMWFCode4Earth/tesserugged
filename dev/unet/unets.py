@@ -350,4 +350,3 @@ def build_unet_sha(input_shape, channels_start=56, z_branch=False):
         model = Model(inputs, output_temp, name="t2m_downscaling_unet")
     
     return model
-
