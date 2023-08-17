@@ -1,0 +1,25 @@
+name: cgan
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - cudatoolkit
+  - cartopy
+pip:
+  - scikit-learn
+  - climlab
+  - TensorFlow=2.7
+  - numba
+  - matplotlib
+  - seaborn
+  - jupyter
+  - xarray
+  - pandas
+  - netcdf4
+  - h5netcdf
+  - cfgrib
+  - dask
+  - tqdm
+  - properscoring
+  - iris
