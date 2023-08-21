@@ -1,0 +1,49 @@
+# config file to store details of local environment
+# this file should be copied to local_config.yaml, and edited appropriately, before use!
+data_paths: "LOCATION1"  # "LOCATION1", "LOCATION2"; uses appropriate entries in data_paths.yaml
+gpu_mem_incr: False  # if True, allocate GPU memory incrementally; if False, take over the whole device (TensorFlow default)
+use_gpu: True  # use GPU _if possible_ (False guarantees that it will not be used).  this is done by setting or unsetting the CUDA_VISIBLE_DEVICES environment variable
+disable_tf32: False  # whether to explicitly disable the use of TensorFloat-32 calculations when running on the GPU, by running tf.config.experimental.enable_tensor_float_32_execution(False)
+
+GENERAL:
+    mode: "GAN"  # choices 'GAN', 'VAEGAN', 'det'
+    problem_type: "normal"  # choices 'normal' (forecast to truth), 'autocoarsen' (coarsened truth to truth)
+    
+MODEL:
+    architecture: "forceconv"  # choices 'normal', 'forceconv', 'forceconv-long'
+    padding: "reflect"  # convolution padding: 'same', 'reflect', or 'symmetric'
+        
+SETUP:
+    log_folder: "/data/logs_cgan"
+
+GENERATOR:
+    filters_gen: 128  # generator network width
+    noise_channels: 4  # only used for GAN
+    latent_variables: 50  # latent variables per pixel; only used for VAEGAN
+    learning_rate_gen: 1e-5  # if training blows up, decrease this
+
+DISCRIMINATOR:
+    filters_disc: 512  # discriminator network width
+    learning_rate_disc: 1e-5  # if training blows up, decrease this
+
+TRAIN:
+    train_years: [2010, 2011, 2012, 2013, 2014, 2015, 2016]
+    training_weights: [1.,]  # only for precip with 4 classes [0.4, 0.3, 0.2, 0.1]  # frequency to sample from each bin
+    num_samples: 2557  # 2010 to 2016; total generator training samples
+    steps_per_checkpoint: 3200  # number of batches per checkpoint save
+    batch_size: 2  # we could use 16 without CL, or 2 with CL
+    kl_weight: 1e-8  # used for VAEGAN
+    ensemble_size: 8  # size of ensemble for content loss; use null to turn off
+    CL_type: "ensmeanMSE"  # type of content loss to use: 'CRPS', 'CRPS_phys', 'ensmeanMSE', 'ensmeanMSE_phys'
+    content_loss_weight: 1000.0  # we used 1000 for ensmeanMSE, and 100 for CRPS
+
+VAL:
+    val_years: [2017, 2018]  # year to draw validation data from (only used for progress.pdf)
+    val_size: 8  # number of examples to plot
+
+EVAL:
+    num_batches: 256  # number of full-image examples to evaluate on
+    add_postprocessing_noise: True  # flag for adding postprocessing noise in rank statistics eval
+    postprocessing_noise_factor: 1e-3  # factor for scaling postprocessing noise in rank statistics eval
+    max_pooling: True  # also calculate CRPS using max pooling over larger regions
+    avg_pooling: True  # ditto for average pooling

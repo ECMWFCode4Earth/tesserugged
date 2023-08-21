@@ -1,0 +1,18 @@
+LOCATION1:
+    GENERAL:
+        TRUTH_PATH: '/data/TRAINING/RESIDUALS/CERRA'
+        FORECAST_PATH: '/data/TRAINING/RESIDUALS/ERA5'
+        CONSTANTS_PATH: '/data/TRAINING/RESIDUALS/STATIC'
+
+    TFRecords:
+        tfrecords_path: '/data/TRAINING/RESIDUALS/tfrecords'
+
+
+LOCATION2:
+    GENERAL:
+        TRUTH_PATH: '/another/path/to/truth/data'
+        FORECAST_PATH: '/another/path/to/forecast/data'
+        CONSTANTS_PATH: '/another/path/to/constants/data'
+
+    TFRecords:
+        tfrecords_path: '/another/path/to/tfrecords/folder'
