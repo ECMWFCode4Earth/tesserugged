@@ -217,7 +217,8 @@ def write_data(
     scaling_factor = ds_fac
 
     # chosen to approximately cover the full image, but can be changed!
-    nsamples = img_size_h * img_size_w // (img_chunk_width**2)
+    # nsamples = img_size_h * img_size_w // (img_chunk_width**2)
+    nsamples = 1  # hardcode, since we don't subsample the image
 
     print(
         "Samples per image:", nsamples
@@ -254,8 +255,8 @@ def write_data(
             ### why is this necessary????? => the random stuff at a few lines below
             for ii in range(nsamples):  # is only 1 in our case
                 # e.g. for image width 94 and img_chunk_width 20, can have 0:20 up to 74:94
-                idh = random.randint(0, img_size_h - img_chunk_width)
-                idw = random.randint(0, img_size_w - img_chunk_width)
+                # idh = random.randint(0, img_size_h - img_chunk_width)
+                # idw = random.randint(0, img_size_w - img_chunk_width)
                 # print(sample[1]["mask"].shape)
                 mask = sample[1]["mask"][
                     0,
