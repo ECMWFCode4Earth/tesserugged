@@ -318,9 +318,10 @@ def write_data(
                 # [specifically, log10(1 + rainfall) > 0.1]
                 # and bins into one of 4 classes: 0-25%, 25-50%, 50-75%, 75-100%
                 # feel free to replace with a different binning strategy!
-                clss = min(
-                    int(np.floor(((truth > 0.1).mean() * num_class))), num_class - 1
-                )
+                # clss = min(
+                #     int(np.floor(((truth > 0.1).mean() * num_class))), num_class - 1
+                # )
+                clss = 0
 
                 fle_hdles[clss].write(example_to_string)
         for fh in fle_hdles:
