@@ -30,7 +30,7 @@ varname <- args[[3]]
 if(!is.null(varname)) {log_info("Variable {varname} selected.")}
 
 out_template <- args[[2]]
-log_info("Write output to: {modeled_residuals_template}")
+log_info("Write output to: {out_template}")
 
 mdl_template <- "dat/TRAINING/CLIMATOLOGY/CERRA/models/t2m_cerra_{lead_time}_climatology-models.rds"
 log_info("Models taken from {mdl_template}")
