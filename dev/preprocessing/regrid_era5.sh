@@ -23,4 +23,6 @@ for lt in "${leadtime[@]}"; do
     stdbuf -oL cdo griddes dat/TRAINING/RESIDUALS/CERRA/t2m_cerra_${lt}_residuals.nc > /tmp/targetgrid.txt
     # bilinear interpolation
     cdo remapbil,/tmp/targetgrid.txt ${projectroot}/dat/${dataset}/RESIDUALS/ERA5/t2m_era5_${lt}_residuals.nc ${projectroot}/dat/${dataset}/RESIDUALS/ERA5_regridded/t2m_era5_${lt}_residuals.nc
+    # bilinear interpolation of raw data
+    cdo remapbil,/tmp/targetgrid.txt ${projectroot}/dat/${dataset}/PREPROCESSED/ERA5/t2m_era5_${lt}.nc ${projectroot}/dat/${dataset}/PREPROCESSED/ERA5_regridded/t2m_era5_${lt}.nc
 done 

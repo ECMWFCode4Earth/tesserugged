@@ -45,14 +45,18 @@ dothis <- function(lead_time) {
     downscaled <- read_stars(here(glue("dat/TESTING/SAMOS/postprocessed/samos-postprocessed_{lead_time}.nc"))) %>%
         setNames("samos") %>%
         .[1, 3:238,6:160]
+    era5 <- read_stars(here(glue("dat/TESTING/PREPROCESSED/ERA5_regridded/t2m_era5_{lead_time}.nc"))) %>%
+        setNames("era5") %>%
+        .[1, 3:238,6:160]
 
     timesteps <- seq_len(dim(cerra)["time"])
     
     #overall
 
-    psd_cerra_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(cerra, c("x", "y"), mean)[[1]])))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
-    psd_downscaled_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(downscaled, c("x", "y"), mean)[[1]])))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
-    psd_overall <- bind_rows(list(cerra = psd_cerra_overall, downscaled = psd_downscaled_overall), .id =  "model")
+    psd_cerra_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(cerra, c("x", "y"), mean)[[1]])))), plot = FALSE)
+    psd_downscaled_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(downscaled, c("x", "y"), mean)[[1]])))), plot = FALSE)
+    psd_era5_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(era5, c("x", "y"), mean)[[1]])))), plot = FALSE)
+    psd_overall <- bind_rows(list(cerra = psd_cerra_overall, downscaled = psd_downscaled_overall, era5 = psd_era5_overall), .id =  "model")
 
 
     psd_overall %>%
@@ -60,16 +64,18 @@ dothis <- function(lead_time) {
         geom_line() +
         theme_minimal() +
         scale_y_log10() + scale_x_log10() + annotation_logticks()
-    ggsave(here(glue("plt/PSD/radialPSD_samos_leadtime{lead_time}_overall.pdf")))
+ggsave(here(glue("plt/PSD/radialPSD_samos_leadtime{lead_time}_overall.pdf")))
 
 
     # loop over timesteps and calculate mean psd
     psd_cerra <- list()
     psd_ds <- list()
+    psd_era5 <- list()
 
     for (i in seq_along(timesteps)){
         psd_cerra[[i]] <- radial.psd(replace_na(truncate_to_square(as.matrix(units::drop_units(cerra[[1]][,,timesteps[i]])))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
         psd_ds[[i]] <- radial.psd(replace_na(truncate_to_square(as.matrix(downscaled[[1]][,,timesteps[i]]))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
+        psd_era5[[i]] <- radial.psd(replace_na(truncate_to_square(as.matrix(era5[[1]][,,timesteps[i]]))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
     }
 
     # common dataframe
@@ -77,7 +83,10 @@ dothis <- function(lead_time) {
         cerra = psd_cerra |>
             setNames(timesteps) |>
             bind_rows(.id = "timesteps"),
-        samos = psd_ds|>
+        samos = psd_ds |>
+            setNames(timesteps) |>
+            bind_rows(.id = "timesteps"),
+        era5 = psd_era5 |>
             setNames(timesteps) |>
             bind_rows(.id = "timesteps")
     ), .id = "dataset")
@@ -105,9 +114,11 @@ dothis <- function(lead_time) {
     per_season <- function(months) {
         cerra_season <- st_apply(cerra %>% filter(lubridate::month(time) %in% months), c("x", "y"), mean) 
         downscaled_season <- st_apply(downscaled %>% filter(lubridate::month(time) %in% months), c("x", "y"), mean)
+        era5_season <- st_apply(era5 %>% filter(lubridate::month(time) %in% months), c("x", "y"), mean)
         psd_cerra_season <- radial.psd(replace_na(truncate_to_square(as.matrix((cerra_season[[1]])))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
         psd_downscaled_season <- radial.psd(replace_na(truncate_to_square(as.matrix((downscaled_season[[1]])))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
-        bind_rows(list(cerra = psd_cerra_season, downscaled = psd_downscaled_season), .id =  "model")
+        psd_era5_season <- radial.psd(replace_na(truncate_to_square(as.matrix((era5_season[[1]])))), plot = FALSE)#, scaled = FALSE, normalized = FALSE)
+        bind_rows(list(cerra = psd_cerra_season, downscaled = psd_downscaled_season, era5 = psd_era5_season), .id =  "model")
     }
     psd_season <- map(seasons, per_season)
 
