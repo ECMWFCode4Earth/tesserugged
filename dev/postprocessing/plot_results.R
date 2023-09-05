@@ -60,7 +60,7 @@ per_lead_time <- function(lead_time) {
         ),
         list(map(
             list(era5_regridded, cerra, downscaled) %>% map(~filter(.x %>%.[1, 3:238,6:160], time == eval_datetime)),
-            ~{radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(.x, c("x", "y"), mean)[[1]])))), plot = FALSE)}
+            ~{radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(.x, c("x", "y"), mean)[[1]])))), plot = FALSE, normalized = FALSE, scaled = FALSE)}
         ) %>%
             setNames(c("era5", "cerra", "samos")) %>%
             bind_rows(.id = "model") %>%

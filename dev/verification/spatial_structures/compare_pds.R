@@ -53,9 +53,9 @@ dothis <- function(lead_time) {
     
     #overall
 
-    psd_cerra_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(cerra, c("x", "y"), mean)[[1]])))), plot = FALSE)
-    psd_downscaled_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(downscaled, c("x", "y"), mean)[[1]])))), plot = FALSE)
-    psd_era5_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(era5, c("x", "y"), mean)[[1]])))), plot = FALSE)
+    psd_cerra_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(cerra, c("x", "y"), mean)[[1]])))), plot = FALSE, scaled = FALSE, normalized = FALSE)
+    psd_downscaled_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(downscaled, c("x", "y"), mean)[[1]])))), plot = FALSE, scaled = FALSE, normalized = FALSE)
+    psd_era5_overall <- radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(era5, c("x", "y"), mean)[[1]])))), plot = FALSE, scaled = FALSE, normalized = FALSE)
     psd_overall <- bind_rows(list(cerra = psd_cerra_overall, downscaled = psd_downscaled_overall, era5 = psd_era5_overall), .id =  "model")
 
 
