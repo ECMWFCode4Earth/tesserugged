@@ -1,3 +1,11 @@
+#!/usr/bin/env Rscript
+
+##################################################################
+#Description    : plot fields (era5, cerra, downscaled and 
+#                 difference) and PSD for individual timesteps
+#Author         : Konrad Mayer
+##################################################################
+
 library(here)
 library(lubridate)
 library(stars)
@@ -24,6 +32,14 @@ replace_na <- function(m, replacement = 0) {
     m[is.na(m)] <- replacement
     m
 }
+
+do_psd <- function(x) {
+    tmp <- replace_na(truncate_to_square(as.matrix(x[[1]])))
+    psd <- radial.psd(tmp, plot = FALSE, scaled = FALSE, normalized = FALSE)
+    max_dist <- sqrt(sum((ceiling(dim(tmp)/2)-1)^2))
+    mutate(psd, wavenumber = wavenumber / max_dist)
+}
+
 # main
 
 per_lead_time <- function(lead_time) {
@@ -59,20 +75,21 @@ per_lead_time <- function(lead_time) {
                 theme_minimal()
         ),
         list(map(
-            list(era5_regridded, cerra, downscaled) %>% map(~filter(.x %>%.[1, 3:238,6:160], time == eval_datetime)),
-            ~{radial.psd(replace_na(truncate_to_square(as.matrix((st_apply(.x, c("x", "y"), mean)[[1]])))), plot = FALSE, normalized = FALSE, scaled = FALSE)}
+            list(era5_regridded, cerra, downscaled) %>% map(~filter(.x %>%.[1, 3:238,6:160], time == eval_datetime)[drop = TRUE]),
+            ~{do_psd(st_apply(.x, c("x", "y"), mean))}
         ) %>%
             setNames(c("era5", "cerra", "samos")) %>%
             bind_rows(.id = "model") %>%
             ggplot(aes(wavenumber, r_spectrum, lty = model)) +
-                geom_line() +
-                theme_minimal() +
-                scale_y_log10() + annotation_logticks() + scale_x_log10() 
+            geom_line() +
+                theme_minimal(20) +
+                scale_y_log10() + annotation_logticks() + scale_x_log10(sec.axis = sec_axis(trans = ~ (.^-1), name = "wavelength")) +
+                labs(y = "Power")
         ))
 
 
-        wrap_plots(plts[1:4], ncol = 2) / plts[[5]] + plot_annotation(title = eval_datetime)
-        ggsave(here(glue("plt/SAMOS/{format(eval_datetime, '%Y%m%dT%H%M%S')}_testset.pdf")), height = 14, width = 10)
+        wrap_plots(plts[1:4], ncol = 2) | plts[[5]] + plot_annotation(title = eval_datetime)
+        ggsave(here(glue("plt/SAMOS/{format(eval_datetime, '%Y%m%dT%H%M%S')}_testset.pdf")), height = 6, width = 20)
 
     }
 
