@@ -1,0 +1,49 @@
+# Define the anchor for the 'locations' list
+locations_anchor: &locations
+  [
+    { "name": "Ibiza-Baleares", "lat": 38.9067, "lon": 1.4206 },
+    { "name": "Mallorca-Baleares", "lat": 39.6953, "lon": 3.0176 },
+    { "name": "Pyrenees-Spain", "lat": 42.5751, "lon": 1.6536 },
+    { "name": "Madrid-Spain", "lat": 40.4168, "lon": -3.7038 },
+    { "name": "Barcelona-Spain", "lat": 41.3851, "lon": 2.1734 },
+    { "name": "Picos_de_Europa-Spain", "lat": 43.1963, "lon": -4.7461 },
+    { "name": "Alicante-Spain", "lat": 38.3452, "lon": -0.4810 },
+    { "name": "Valencia-Spain", "lat": 39.4699, "lon": -0.3763 },
+    { "name": "Malaga-Spain", "lat": 36.7213, "lon": -4.4213 },
+    { "name": "Almeria-Spain", "lat": 36.8381, "lon": -2.4597 },
+    { "name": "Alboran_Sea-Spain", "lat": 35.9393, "lon": -3.2231 },
+    { "name": "Balearic_Sea-Spain", "lat": 39.8223, "lon": 2.6480 }
+  ]
+
+validation:
+  model_name: "samos"
+  model_predictions_location: /scratch/klifol/kmayer/tmp/code4earth/datasets/model/ #/ssea/SSEA/C4E/DATA/TESTING/SAMOS/postprocessed
+  baseline_name: "bicubic"
+  baseline_predictions_location: /scratch/klifol/kmayer/tmp/code4earth/datasets/baseline/ #/ssea/SSEA/C4E/DATA/TESTING/PREPROCESSED/ERA5_regridded
+  observations_name: "cerra"
+  observations_location: /scratch/klifol/kmayer/tmp/code4earth/datasets/cerra/ #/ssea/SSEA/C4E/DATA/TESTING/PREPROCESSED/CERRA
+  visualization_types:
+    metrics_global_map:
+      show_baseline: True
+      color_palette: None
+    sample_observation_vs_prediction:
+      number_of_samples: 10
+    time_series_for_a_single_site:
+      locations: *locations
+      temporal_subset: None
+      aggregate_by: ["1D", "7D", "15D", "1M"]
+      color_palette: None
+    error_time_series_for_a_single_site:
+      locations: *locations
+      temporal_subset: None
+      aggregate_by: [ "1D", "7D", "15D", "1M" ]
+      color_palette: None
+    error_distribution_for_a_single_site:
+      locations: *locations
+      temporal_subset: None
+      color_palette: None
+    boxplot_for_a_single_site:
+      locations: *locations
+      group_by: ["hour", "month", "season"]
+      color_palette: None
+  validation_dir: /scratch/klifol/kmayer/tmp/code4earth/validation/
