@@ -210,7 +210,6 @@ if __name__ == "__main__":
                 num_cases=val_size,
                 plot_fn=plot_fname,
             )
-            quit("asd")
 
             training_samples += steps_per_checkpoint * batch_size
             checkpoint += 1
@@ -237,7 +236,6 @@ if __name__ == "__main__":
             )
             model.gen.save_weights(gen_weights_file)
 
-        quit("asd main.py")
     else:
         print("Training skipped...")
 
