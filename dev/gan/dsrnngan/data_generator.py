@@ -108,9 +108,9 @@ class DataGenerator(Sequence):
             norm=self.fcst_norm,
             years=self.dates,
         )
-        # print(data_x_batch.shape)  # (1, 12418, 32, 48, 1)
-        # print(data_y_batch.shape)  # (1, 12418, 160, 240)
-        # print(data_mask_batch.shape)  # (1, 12418, 160, 240)
+        print(f"{data_x_batch.shape = }")  # (1, 365, 32, 48, 1)
+        print(f"{data_y_batch.shape = }")  # (1, 365, 160, 240)
+        print(f"{data_mask_batch.shape = }")  # (1, 365, 160, 240)
         # quit("datgen")
         if self.autocoarsen:
             # replace forecast data by coarsened truth data!
