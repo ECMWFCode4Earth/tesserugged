@@ -15,14 +15,13 @@ def train_model(
     num_cases=8,
     plot_fn=None
 ):
-    print(batch_gen_train)
-    print(batch_gen_train.take(1))
-    print(batch_gen_train.take(1).as_numpy_iterator())
-    quit("train.py")
     for inputs, _ in batch_gen_train.take(1).as_numpy_iterator():
         cond = inputs["lo_res_inputs"]
-        quit("asd train.py")
-        img_shape = cond.shape[1:-1]
+        print(cond[0, ...])
+        print(cond[1, ...])
+
+        print(cond.shape)
+        img_shape = cond.shape[-2:]
         batch_size = cond.shape[0]
     del cond
     del inputs
