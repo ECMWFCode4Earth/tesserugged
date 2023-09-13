@@ -140,9 +140,7 @@ def load_fcst_truth_batch(
     for i, year in enumerate(batch_dates):
         h = hours[i]
         batch_x.append(
-            load_fcst_stack(
-                fcst_fields, h, log_precip=log_precip, norm=norm, year=year
-            )
+            load_fcst_stack(fcst_fields, h, log_precip=log_precip, norm=norm, year=year)
         )
         truth, mask = load_truth_and_mask(h, year, log_precip=log_precip)
         batch_y.append(truth)
