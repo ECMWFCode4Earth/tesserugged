@@ -146,6 +146,22 @@ def load_fcst_truth_batch(
         batch_y.append(truth)
         batch_mask.append(mask)
 
+        ### testing iterations across year for each day
+        # batch_year_x = load_fcst_stack(
+        #     fcst_fields, h, log_precip=log_precip, norm=norm, year=year
+        # )
+        # truth_year, mask_year = load_truth_and_mask(h, year, log_precip=log_precip)
+
+        # time_dim = batch_year_x.shape[0]
+        # assert (time_dim == 365) or (
+        #     time_dim == 366
+        # ), f"Expected time_dim = 365, or 366, got {time_dim = }"
+
+        # for timestep in range(time_dim):
+        #     batch_x.append(batch_year_x[timestep, :, :, :])
+        #     batch_y.append(truth_year[timestep, :, :])
+        #     batch_mask.append(mask_year[timestep, :, :])
+
     return np.array(batch_x), np.array(batch_y), np.array(batch_mask)
 
 
