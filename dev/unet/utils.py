@@ -14,17 +14,17 @@ import os
 import numpy as np
 import pandas as pd
 import xarray as xr
-
+from datetime import datetime
 ##plotting
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.colors import TwoSlopeNorm
-import cartopy.crs as ccrs
-import cartopy
-import cartopy.feature as cfeature
-import matplotlib.ticker as mticker
-from matplotlib.colors import LinearSegmentedColormap
+#import matplotlib as mpl
+#mpl.use('Agg')
+#import matplotlib.pyplot as plt
+#from matplotlib.colors import TwoSlopeNorm
+#import cartopy.crs as ccrs
+#import cartopy
+#import cartopy.feature as cfeature
+#import matplotlib.ticker as mticker
+#from matplotlib.colors import LinearSegmentedColormap
 
 # import tensorflow for seed etc.
 import tensorflow as tf
@@ -115,7 +115,17 @@ def normalize(x,xmin,xmax):
         - scaler: scaling object for later usage for denormalizing
     """
     
+    ##add extra check: if we have a batch size larger than 1 we need to expand xmin and xmax --> datasets
+    #if 'time' not in list(xmin.coords.keys()):
+        
+    #    xmin[list(xmin.keys())[0]] = xmin[list(xmin.keys())[0]].expand_dims(time=(x.time))
+    #    xmax[list(xmin.keys())[0]] = xmax[list(xmax.keys())[0]].expand_dims(time=(x.time))
+        
+
     data = (x - xmin) / (xmax - xmin)
+    
+    xmin = None
+    xmax = None
 
     return data
 
@@ -140,15 +150,21 @@ def denormalize_predictions(data, flinktopo, flinktemp):
     """
     Denormalizing predictions. Need to get/add links to the data for scaling.
     """
+    if type(flinktemp[0]) != list:
+        tempmin = flinktemp[0]
+        tempmax = flinktemp[1]    
+    else:
+        tempmin = xr.open_dataset(flinktemp[0])
+        tempmax = xr.open_dataset(flinktemp[1])
 
     topominmax = xr.open_dataset(flinktopo)
-    tempmin = xr.open_dataset(flinktemp[0])
-    tempmax = xr.open_dataset(flinktemp[1])
 
     if len(data.keys()) == 1:
-        temp_denorm = denormalize(data['prediction_t2m_normalized'], tempmin['t2m'][0,:,:],tempmax['t2m'][0,:,:]).to_dataset(name='predicted_t2m')
+        temp_denorm = denormalize(data['prediction_t2m_normalized'], tempmin['t2mmincerra'].values,tempmax['t2mmaxcerra'].values).to_dataset(name='predicted_t2m')
         data['predicted_t2m'] = temp_denorm['predicted_t2m']    
     elif len(data.keys()) > 1:
+        temp_denorm = denormalize(data['prediction_t2m_normalized'], tempmin['t2mmincerra'].values,tempmax['t2mmaxcerra'].values).to_dataset(name='predicted_t2m')
+        data['predicted_t2m'] = temp_denorm['predicted_t2m']
         
         topo_denorm = denormalize(data['prediction_topography_normalized'],topominmax['orog'][0,:,:].min(),topominmax['orog'][0,:,:].max()).to_dataset(name='predicted_topo')
         data['predicted_topo'] = topo_denorm['predicted_topo']
@@ -189,7 +205,7 @@ def predict_2_xarray(data, metafile,z_branch, unet_name):
                         {'units': 'm', 
                         'long_name':'normalized_topography'})}
     else:
-        data_vars = {'prediction_t2m_normalized':(['time', 'latitude','longitude'], data[:,:,:], 
+        data_vars = {'prediction_t2m_normalized':(['time', 'latitude','longitude'], data[:,:,:,0], 
                         {'units': 'Kelvin', 
                         'long_name':'normalized_t2m'})}
        
@@ -199,7 +215,7 @@ def predict_2_xarray(data, metafile,z_branch, unet_name):
                 'longitude':(['longitude'], metafile.longitude.data)}
 
     # define global attributes
-    attrs = {'creation_date': datetime.now(), 
+    attrs = {'creation_date': datetime.now().strftime('%Y%m%d %H:%M:%S'), 
                 'author':'Irene Schicker, within the frame of Code4Earth 2023, Issue 25', 
                 'modelname': unet_name,
                 'email':'irene.schicker@geosphere.at'}
@@ -210,12 +226,12 @@ def predict_2_xarray(data, metafile,z_branch, unet_name):
     
     return predictions_ds
 
-
+"""
 #########################PLOTTING function
 def plottingfield(plotdata, paramname,plotfilename, title, mini, maxi):
-    '''
-    Plot the desired field metric and add the score as a text field into the plot.
-    '''
+    #'''
+    #Plot the desired field metric and add the score as a text field into the plot.
+    #'''
     #print(plotdata)
     plotdata = plotdata.rename({list(plotdata.keys())[0]:paramname}) 
 
@@ -260,3 +276,4 @@ def plottingfield(plotdata, paramname,plotfilename, title, mini, maxi):
     #plt.show()
     plt.close('all')
     
+"""
