@@ -25,7 +25,9 @@ class DataGenerator(Sequence):
         #     1,
         # ]
         if isinstance(dates, int):
-            self.dates = [dates,]
+            self.dates = [
+                dates,
+            ]
         else:
             self.dates = dates
 
@@ -122,13 +124,18 @@ class DataGenerator(Sequence):
                 "mask": data_mask_batch,
             }
         else:
-            return {"lo_res_inputs": data_x_batch, "hi_res_inputs": self.constants}, {
+            return {
+                "lo_res_inputs": data_x_batch,
+                "hi_res_inputs": self.constants,
+            }, {
                 "output": data_y_batch,
                 "mask": data_mask_batch,
             }
 
     def shuffle_data(self):
-        assert len(self.hours) == len(self.dates), f"{len(self.hours) = } {len(self.dates) = }"
+        assert len(self.hours) == len(
+            self.dates
+        ), f"{len(self.hours) = } {len(self.dates) = }"
         p = np.random.permutation(len(self.hours))
         self.hours = self.hours[p]
         self.dates = self.dates[p]
