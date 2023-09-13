@@ -17,9 +17,9 @@ CLASSES = 1  # was = 4 for preciptiation, but probably not needed for temperatur
 # DEFAULT_FCST_SHAPE = (32, 48, len(all_fcst_fields))
 # DEFAULT_CON_SHAPE = (160, 240, 2)
 # DEFAULT_OUT_SHAPE = (160, 240, 1)
-DEFAULT_FCST_SHAPE = (365, 32, 48)
+DEFAULT_FCST_SHAPE = (32, 48)
 DEFAULT_CON_SHAPE = (160, 240, 2)
-DEFAULT_OUT_SHAPE = (365, 160, 240)
+DEFAULT_OUT_SHAPE = (160, 240)
 
 
 def DataGenerator(years, batch_size, repeat=True, autocoarsen=False, weights=None):
