@@ -257,74 +257,83 @@ def write_data(
                 # e.g. for image width 94 and img_chunk_width 20, can have 0:20 up to 74:94
                 # idh = random.randint(0, img_size_h - img_chunk_width)
                 # idw = random.randint(0, img_size_w - img_chunk_width)
-                # print(sample[1]["mask"].shape)
-                mask = sample[1]["mask"][
-                    0,
-                    :,
-                    :,
-                    :,
+
+                ## introduce loop over days to save examples per day
+                mask_year = sample[1]["mask"].squeeze()
+                hi_in_year = sample[0]["hi_res_inputs"].squeeze()
+                lo_in_year = sample[0]["lo_res_inputs"].squeeze()
+                out_year = sample[1]["output"].squeeze()
+
+                time_dim = out_year.shape[0]
+                assert (time_dim == 365) or (
+                    time_dim == 366
+                ), f"expected time_dim 365 or 366, but is: {time_dim = }"
+                for k in range(time_dim):
+                    mask = mask_year[k, ...].flatten()  # [
+                    # 0,
+                    # :,
+                    # :,
+                    # :,
                     # no subsampling in image
                     # idh * scaling_factor : (idh + img_chunk_width) * scaling_factor,
                     # idw * scaling_factor : (idw + img_chunk_width) * scaling_factor,
-                ].flatten()
-                # print(img_size_h, img_chunk_width)
-                # print(img_size_w, img_chunk_width)
-                # quit()
-                if np.any(mask):
-                    # some of the truth data is invalid, so don't use this subsample
-                    continue
-                print(sample[1]["output"].shape)
-                truth = sample[1]["output"][
-                    0,
-                    :,
-                    :,
-                    :,
+                    # ]
+                    # print(img_size_h, img_chunk_width)
+                    # print(img_size_w, img_chunk_width)
+                    if np.any(mask):
+                        # some of the truth data is invalid, so don't use this subsample
+                        continue
+                    truth = out_year[k, ...]  # [
+                    # 0,
+                    # :,
+                    # :,
+                    # :,
                     # no subsampling in image
                     # idh * scaling_factor : (idh + img_chunk_width) * scaling_factor,
                     # idw * scaling_factor : (idw + img_chunk_width) * scaling_factor,
-                ]
-                const = sample[0]["hi_res_inputs"][
-                    0,
-                    :,
-                    :,
+                    # ]
+                    const = hi_in_year[...]  # [
+                    # 0,
+                    # :,
+                    # :,
                     # no subsampling in image
                     # idh * scaling_factor : (idh + img_chunk_width) * scaling_factor,
                     # idw * scaling_factor : (idw + img_chunk_width) * scaling_factor,
-                    :,
-                ]
-                forecast = sample[0]["lo_res_inputs"][
-                    0,
-                    :,
-                    :,
-                    :,
+                    #     :,
+                    # ]ss
+                    forecast = lo_in_year[k, ...]  # [
+                    # 0,
+                    # :,
+                    # :,
+                    # :,
                     # no subsampling in image
                     # idh : idh + img_chunk_width,
                     # idw : idw + img_chunk_width, :
-                ]
-                print(f"{truth.shape = }")
-                print(f"{const.shape = }")
-                print(f"{forecast.shape = }")
-                feature = {
-                    "generator_input": _float_feature(forecast.flatten()),
-                    "constants": _float_feature(const.flatten()),
-                    "generator_output": _float_feature(truth.flatten()),
-                }
-                features = tf.train.Features(feature=feature)
-                example = tf.train.Example(features=features)
-                example_to_string = example.SerializeToString()
-                # quit(example_to_string)
+                    # ]
+                    # print(f"generator_input: {forecast.shape = }")
+                    # print(f"constants: {const.shape = }")
+                    # print(f"generator_output: {truth.shape = }")
+                    feature = {
+                        "generator_input": _float_feature(forecast.flatten()),
+                        "constants": _float_feature(const.flatten()),
+                        "generator_output": _float_feature(truth.flatten()),
+                    }
+                    features = tf.train.Features(feature=feature)
+                    example = tf.train.Example(features=features)
+                    example_to_string = example.SerializeToString()
+                    # quit(example_to_string)
 
-                # all class binning is in this one line.
-                # as written, calculates proportion of image with "some rain"
-                # [specifically, log10(1 + rainfall) > 0.1]
-                # and bins into one of 4 classes: 0-25%, 25-50%, 50-75%, 75-100%
-                # feel free to replace with a different binning strategy!
-                # clss = min(
-                #     int(np.floor(((truth > 0.1).mean() * num_class))), num_class - 1
-                # )
-                clss = 0
+                    # all class binning is in this one line.
+                    # as written, calculates proportion of image with "some rain"
+                    # [specifically, log10(1 + rainfall) > 0.1]
+                    # and bins into one of 4 classes: 0-25%, 25-50%, 50-75%, 75-100%
+                    # feel free to replace with a different binning strategy!
+                    # clss = min(
+                    #     int(np.floor(((truth > 0.1).mean() * num_class))), num_class - 1
+                    # )
+                    clss = 0
 
-                fle_hdles[clss].write(example_to_string)
+                    fle_hdles[clss].write(example_to_string)
         for fh in fle_hdles:
             fh.close()
 
