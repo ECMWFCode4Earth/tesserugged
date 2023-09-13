@@ -132,6 +132,38 @@ class DataGenerator(Sequence):
                 "mask": data_mask_batch,
             }
 
+        ### testing some stuff by iterating through the days per year
+        # time_dim = data_x_batch.shape[0]
+        # assert (time_dim == 365) or (
+        #     time_dim == 366
+        # ), f"Expected time_dim = 365, or 366, got {time_dim = }"
+
+        # if self.constants is None:
+        #     return [
+        #         (
+        #             {"lo_res_inputs": data_x_batch[timestep, :, :, :]},
+        #             {
+        #                 "output": data_y_batch[timestep, :, :],
+        #                 "mask": data_mask_batch[timestep, :, :],
+        #             },
+        #         )
+        #         for timestep in range(time_dim)
+        #     ]
+        # else:
+        #     return [
+        #         (
+        #             {
+        #                 "lo_res_inputs": data_x_batch[timestep, :, :, :],
+        #                 "hi_res_inputs": self.constants,
+        #             },
+        #             {
+        #                 "output": data_y_batch[timestep, :, :],
+        #                 "mask": data_mask_batch[timestep, :, :],
+        #             },
+        #         )
+        #         for timestep in range(time_dim)
+        #     ]
+
     def shuffle_data(self):
         assert len(self.hours) == len(
             self.dates
