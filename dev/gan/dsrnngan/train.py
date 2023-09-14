@@ -17,7 +17,7 @@ def train_model(
 ):
     for inputs, _ in batch_gen_train.take(1).as_numpy_iterator():
         cond = inputs["lo_res_inputs"]
-        img_shape = cond.shape[-2:]
+        img_shape = cond.shape[1:-1]
         batch_size = cond.shape[0]
     del cond
     del inputs
