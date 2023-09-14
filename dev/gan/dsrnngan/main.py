@@ -16,6 +16,7 @@ import read_config
 import setupdata
 import setupmodel
 import train
+from data import all_fcst_fields
 
 
 if __name__ == "__main__":
@@ -142,7 +143,7 @@ if __name__ == "__main__":
 
     if problem_type == "normal":
         autocoarsen = False
-        input_channels = 9
+        input_channels = len(all_fcst_fields)
     elif problem_type == "autocoarsen":
         autocoarsen = True
         input_channels = 1

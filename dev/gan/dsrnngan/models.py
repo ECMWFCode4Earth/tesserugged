@@ -5,12 +5,14 @@ from tensorflow.keras.layers import Input, LeakyReLU, UpSampling2D
 
 from blocks import residual_block, const_upscale_block
 
+from data import all_fcst_fields
+
 
 def generator(
     mode,
     arch,
     downscaling_steps,
-    input_channels=1,
+    input_channels=len(all_fcst_fields),
     latent_variables=1,
     noise_channels=8,
     filters_gen=64,
