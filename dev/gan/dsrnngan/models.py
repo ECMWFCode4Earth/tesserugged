@@ -184,7 +184,7 @@ def generator(
 def discriminator(
     arch,
     downscaling_steps,
-    input_channels=9,
+    input_channels=len(all_fcst_fields),
     constant_fields=2,
     filters_disc=64,
     conv_size=(3, 3),
