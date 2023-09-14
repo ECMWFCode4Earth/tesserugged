@@ -10,7 +10,7 @@ def generator(
     mode,
     arch,
     downscaling_steps,
-    input_channels=9,
+    input_channels=1,
     latent_variables=1,
     noise_channels=8,
     filters_gen=64,
