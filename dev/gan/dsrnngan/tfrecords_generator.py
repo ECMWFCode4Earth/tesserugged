@@ -17,9 +17,9 @@ CLASSES = 1  # was = 4 for preciptiation, but probably not needed for temperatur
 # DEFAULT_FCST_SHAPE = (32, 48, len(all_fcst_fields))
 # DEFAULT_CON_SHAPE = (160, 240, 2)
 # DEFAULT_OUT_SHAPE = (160, 240, 1)
-DEFAULT_FCST_SHAPE = (32, 48)
+DEFAULT_FCST_SHAPE = (32, 48, 1)
 DEFAULT_CON_SHAPE = (160, 240, 2)
-DEFAULT_OUT_SHAPE = (160, 240)
+DEFAULT_OUT_SHAPE = (160, 240, 1)
 
 
 def DataGenerator(years, batch_size, repeat=True, autocoarsen=False, weights=None):
@@ -251,7 +251,13 @@ def write_data(
             if (batch % 10) == 0:
                 print(f"{hour = }, {batch = }")
             sample = dgc.__getitem__(batch)  # tuple of dictionaries with input/output
-
+            # print(type(sample))
+            # print(len(sample))
+            # # print(sample[0])
+            # print(sample[0]["lo_res_inputs"].shape)
+            # print(sample[0]["hi_res_inputs"].shape)
+            # # print(sample[0].shape)
+            # quit()
             ### why is this necessary????? => the random stuff at a few lines below
             for ii in range(nsamples):  # is only 1 in our case
                 # e.g. for image width 94 and img_chunk_width 20, can have 0:20 up to 74:94
@@ -370,6 +376,11 @@ def save_dataset(tfrecords_dataset, flename, max_batches=None):
 
 if __name__ == "__main__":  #
     for yeariter in range(2010, 2018 + 1):
-    # for yeariter in range(2016, 2018 + 1):
+        # for yeariter in range(2010, 2010 + 1):
         print(f"process data for {yeariter = }")
         write_data(year=yeariter)
+
+    # ds = create_dataset([2010], [0], folder=records_folder)
+    # for item in ds:
+    #     print(item)
+    #     break
