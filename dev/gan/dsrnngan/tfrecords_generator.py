@@ -316,6 +316,8 @@ def write_data(
                     # idh : idh + img_chunk_width,
                     # idw : idw + img_chunk_width, :
                     # ]
+                    forecast = np.expand_dims(forecast, -1)
+                    truth = np.expand_dims(truth, -1)
                     # print(f"generator_input: {forecast.shape = }")
                     # print(f"constants: {const.shape = }")
                     # print(f"generator_output: {truth.shape = }")
