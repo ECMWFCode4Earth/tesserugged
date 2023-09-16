@@ -5,10 +5,16 @@ from tfrecords_generator import DataGenerator
 
 
 # Incredibly slim wrapper around tfrecords_generator.DataGenerator.  Can probably remove...
-def setup_batch_gen(train_years, batch_size=16, autocoarsen=False, weights=None):
+def setup_batch_gen(
+    train_years, batch_size=16, hour="*", autocoarsen=False, weights=None
+):
     print(f"autocoarsen flag is {autocoarsen}")
     batch_gen_train = DataGenerator(
-        train_years, batch_size=batch_size, autocoarsen=autocoarsen, weights=weights
+        train_years,
+        batch_size=batch_size,
+        hour=hour,
+        autocoarsen=autocoarsen,
+        weights=weights,
     )
     return batch_gen_train
 
@@ -34,7 +40,12 @@ def setup_full_image_dataset(years, batch_size=1, autocoarsen=False):
 
 
 def setup_data(
-    train_years=None, val_years=None, autocoarsen=False, weights=None, batch_size=None
+    train_years=None,
+    val_years=None,
+    hour="*",
+    autocoarsen=False,
+    weights=None,
+    batch_size=None,
 ):
     batch_gen_train = (
         None
@@ -42,6 +53,7 @@ def setup_data(
         else setup_batch_gen(
             train_years=train_years,
             batch_size=batch_size,
+            hour=hour,
             autocoarsen=autocoarsen,
             weights=weights,
         )

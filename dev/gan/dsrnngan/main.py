@@ -96,6 +96,7 @@ if __name__ == "__main__":
     lr_disc = setup_params["DISCRIMINATOR"]["learning_rate_disc"]
     train_years = setup_params["TRAIN"]["train_years"]
     training_weights = setup_params["TRAIN"]["training_weights"]
+    train_hour = setup_params["TRAIN"]["training_hour"]
     num_samples = setup_params["TRAIN"]["num_samples"]
     steps_per_checkpoint = setup_params["TRAIN"]["steps_per_checkpoint"]
     batch_size = setup_params["TRAIN"]["batch_size"]
@@ -172,28 +173,31 @@ if __name__ == "__main__":
         batch_gen_train, data_gen_valid = setupdata.setup_data(
             train_years=train_years,
             val_years=val_years,
+            hour=train_hour,
             autocoarsen=autocoarsen,
             weights=training_weights,
             batch_size=batch_size,
         )
         if args.restart:  # load weights and run status
             model.load(model.filenames_from_root(model_weights_root))
-            with open(os.path.join(log_folder, "run_status.json"), "r") as f:
+            with open(
+                os.path.join(log_folder, f"run_status_h{train_hour}.json"), "r"
+            ) as f:
                 run_status = json.load(f)
             training_samples = run_status["training_samples"]
             checkpoint = int(training_samples / (steps_per_checkpoint * batch_size)) + 1
 
-            log_file = os.path.join(log_folder, "log.txt")
+            log_file = os.path.join(log_folder, f"log_h{train_hour}.txt")
             log = pd.read_csv(log_file)
             log_list = [log]
 
         else:  # initialize run status
             training_samples = 0
 
-            log_file = os.path.join(log_folder, "log.txt")
+            log_file = os.path.join(log_folder, f"log_h{train_hour}.txt")
             log_list = []
 
-        plot_fname = os.path.join(log_folder, "progress.pdf")
+        plot_fname = os.path.join(log_folder, f"progress_h{train_hour}.pdf")
 
         while training_samples < num_samples:  # main training loop
             print(f"Checkpoint {checkpoint}/{num_checkpoints}")
@@ -220,7 +224,9 @@ if __name__ == "__main__":
             run_status = {
                 "training_samples": training_samples,
             }
-            with open(os.path.join(log_folder, "run_status.json"), "w") as f:
+            with open(
+                os.path.join(log_folder, f"run_status_h{train_hour}.json"), "w"
+            ) as f:
                 json.dump(run_status, f)
 
             data = {"training_samples": [training_samples]}
@@ -233,14 +239,15 @@ if __name__ == "__main__":
 
             # Save model weights each checkpoint
             gen_weights_file = os.path.join(
-                model_weights_root, f"gen_weights-{training_samples:07d}.h5"
+                model_weights_root,
+                f"gen_weights-{training_samples:07d}_h{train_hour}.h5",
             )
             model.gen.save_weights(gen_weights_file)
 
     else:
         print("Training skipped...")
 
-    eval_fname = os.path.join(log_folder, "eval_validation.txt")
+    eval_fname = os.path.join(log_folder, f"eval_validation_h{train_hour}.txt")
 
     # model iterations to save full rank data to disk for during evaluations;
     # necessary for plot rank histograms. these are large files, so small

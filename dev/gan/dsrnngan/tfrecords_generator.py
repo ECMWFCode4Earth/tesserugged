@@ -22,15 +22,23 @@ DEFAULT_CON_SHAPE = (160, 240, 2)
 DEFAULT_OUT_SHAPE = (160, 240, 1)
 
 
-def DataGenerator(years, batch_size, repeat=True, autocoarsen=False, weights=None):
+def DataGenerator(
+    years, batch_size, hour="*", repeat=True, autocoarsen=False, weights=None
+):
     return create_mixed_dataset(
-        years, batch_size, repeat=repeat, autocoarsen=autocoarsen, weights=weights
+        years,
+        batch_size,
+        hour=hour,
+        repeat=repeat,
+        autocoarsen=autocoarsen,
+        weights=weights,
     )
 
 
 def create_mixed_dataset(
     years,
     batch_size,
+    hour="*",
     fcst_shape=DEFAULT_FCST_SHAPE,
     con_shape=DEFAULT_CON_SHAPE,
     out_shape=DEFAULT_OUT_SHAPE,
@@ -46,6 +54,7 @@ def create_mixed_dataset(
         create_dataset(
             years,
             ii,
+            hour=hour,
             fcst_shape=fcst_shape,
             con_shape=con_shape,
             out_shape=out_shape,
@@ -124,6 +133,7 @@ def _parse_batch(
 def create_dataset(
     years,
     clss,
+    hour="*",
     fcst_shape=DEFAULT_FCST_SHAPE,
     con_shape=DEFAULT_CON_SHAPE,
     out_shape=DEFAULT_OUT_SHAPE,
@@ -143,7 +153,7 @@ def create_dataset(
     # But may want to change in future
     filelist = []
     for yr in years:
-        fpattern = os.path.join(folder, f"{yr}_*.{clss}.tfrecords")
+        fpattern = os.path.join(folder, f"{yr}_{hour}.{clss}.tfrecords")
         filelist += glob.glob(fpattern)
 
     files_ds = tf.data.Dataset.list_files(filelist)
