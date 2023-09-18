@@ -85,14 +85,16 @@ latent_variables = setup_params["GENERATOR"]["latent_variables"]
 filters_disc = setup_params["DISCRIMINATOR"]["filters_disc"]
 val_years = setup_params["VAL"]["val_years"]
 lr_gen = setup_params["GENERATOR"]["learning_rate_gen"]
+train_hour = setup_params["TRAIN"]["training_hour"]
 lr_gen = float(lr_gen)
 
 data_paths = read_config.get_data_paths()
 
 batch_size = 1
 
-weights_fn = os.path.join(log_folder, 'models', f'gen_weights-{model_number}.h5')
-dates = get_dates(predict_year)
+weights_fn = os.path.join(
+    log_folder, "models", f"gen_weights-{model_number}_h{train_hour}.h5"
+)
 
 if problem_type == "normal":
     autocoarsen = False
