@@ -21,37 +21,40 @@ path = os.path.dirname(os.path.abspath(__file__))
 ds_fac = read_config.read_downscaling_factor()["downscaling_factor"]
 
 
-def setup_inputs(*,
-                 mode,
-                 arch,
-                 downscaling_steps,
-                 val_years,
-                 autocoarsen,
-                 input_channels,
-                 filters_gen,
-                 filters_disc,
-                 noise_channels,
-                 latent_variables,
-                 padding):
-
+def setup_inputs(
+    *,
+    mode,
+    arch,
+    downscaling_steps,
+    val_years,
+    autocoarsen,
+    input_channels,
+    filters_gen,
+    filters_disc,
+    noise_channels,
+    latent_variables,
+    padding,
+):
     # initialise model
-    model = setupmodel.setup_model(mode=mode,
-                                   arch=arch,
-                                   downscaling_steps=downscaling_steps,
-                                   input_channels=input_channels,
-                                   filters_gen=filters_gen,
-                                   filters_disc=filters_disc,
-                                   noise_channels=noise_channels,
-                                   latent_variables=latent_variables,
-                                   padding=padding)
+    model = setupmodel.setup_model(
+        mode=mode,
+        arch=arch,
+        downscaling_steps=downscaling_steps,
+        input_channels=input_channels,
+        filters_gen=filters_gen,
+        filters_disc=filters_disc,
+        noise_channels=noise_channels,
+        latent_variables=latent_variables,
+        padding=padding,
+    )
 
     gen = model.gen
 
     # always uses full-sized images
-    print('Loading full sized image dataset')
+    print("Loading full sized image dataset")
     _, data_gen_valid = setupdata.setup_data(
-        val_years=val_years,
-        autocoarsen=autocoarsen)
+        val_years=val_years, autocoarsen=autocoarsen
+    )
     return gen, data_gen_valid
 
 
@@ -61,8 +64,8 @@ def _init_VAEGAN(gen, data_gen, batch_size, latent_variables):
         # but this doesn't actually seem to be necessary?!
         data_gen_iter = iter(data_gen)
         inputs, _ = next(data_gen_iter)
-        cond = inputs['lo_res_inputs']
-        const = inputs['hi_res_inputs']
+        cond = inputs["lo_res_inputs"]
+        const = inputs["hi_res_inputs"]
 
         noise_shape = np.array(cond)[0, ..., 0].shape + (latent_variables,)
         noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
@@ -73,20 +76,21 @@ def _init_VAEGAN(gen, data_gen, batch_size, latent_variables):
     return
 
 
-def eval_one_chkpt(*,
-                   mode,
-                   gen,
-                   data_gen,
-                   noise_channels,
-                   latent_variables,
-                   num_images,
-                   add_noise,
-                   ensemble_size,
-                   noise_factor,
-                   denormalise_data=True,
-                   normalize_ranks=True,
-                   show_progress=True):
-
+def eval_one_chkpt(
+    *,
+    mode,
+    gen,
+    data_gen,
+    noise_channels,
+    latent_variables,
+    num_images,
+    add_noise,
+    ensemble_size,
+    noise_factor,
+    denormalise_data=True,
+    normalize_ranks=True,
+    show_progress=True,
+):
     ranks = []
     lowress = []
     hiress = []
@@ -97,7 +101,7 @@ def eval_one_chkpt(*,
     ralsd_all = []
 
     data_gen_iter = iter(data_gen)
-    tpidx = data.all_fcst_fields.index('tp')
+    tpidx = data.all_fcst_fields.index("tp")
     batch_size = 1  # do one full-size image at a time
 
     if mode == "det":
@@ -105,22 +109,23 @@ def eval_one_chkpt(*,
 
     if show_progress:
         # Initialize progbar
-        progbar = generic_utils.Progbar(num_images,
-                                        stateful_metrics=("CRPS", "EM-MSE"))
+        progbar = generic_utils.Progbar(num_images, stateful_metrics=("CRPS", "EM-MSE"))
 
-    CRPS_pooling_methods = ['no_pooling', 'max_4', 'max_16', 'avg_4', 'avg_16']
+    CRPS_pooling_methods = ["no_pooling", "max_4", "max_16", "avg_4", "avg_16"]
     rng = np.random.default_rng()
 
     for kk in range(num_images):
         # load truth images
         inputs, outputs = next(data_gen_iter)
-        cond = inputs['lo_res_inputs']
-        const = inputs['hi_res_inputs']
-        truth = outputs['output']
-        mask = outputs['mask']
+        cond = inputs["lo_res_inputs"]
+        const = inputs["hi_res_inputs"]
+        truth = outputs["output"]
+        mask = outputs["mask"]
 
         masked_truth = ma.array(truth, mask=mask)
-        masked_truth = np.expand_dims(masked_truth, axis=-1)  # must be 4D tensor for pooling NHWC
+        masked_truth = np.expand_dims(
+            masked_truth, axis=-1
+        )  # must be 4D tensor for pooling NHWC
         if denormalise_data:
             masked_truth = data.denormalise(masked_truth)
 
@@ -136,7 +141,7 @@ def eval_one_chkpt(*,
         elif mode == "det":
             sample_gen = gen.predict([cond, const])
             samples_gen.append(sample_gen.astype("float32"))
-        elif mode == 'VAEGAN':
+        elif mode == "VAEGAN":
             # call encoder once
             mean, logvar = gen.encoder([cond, const])
             noise_shape = np.array(cond)[0, ..., 0].shape + (latent_variables,)
@@ -160,8 +165,8 @@ def eval_one_chkpt(*,
             # if an entire image is masked out, we still calculate the overall
             # MAE, MSE and EM-RMSE correctly, since we concatentate together
             # masked array objects and take the mean.
-            mae = ((np.abs(masked_truth - sample_gen)).mean(axis=(1, 2)))
-            mse = ((masked_truth - sample_gen)**2).mean(axis=(1, 2))
+            mae = (np.abs(masked_truth - sample_gen)).mean(axis=(1, 2))
+            mse = ((masked_truth - sample_gen) ** 2).mean(axis=(1, 2))
 
             mae_all.append(mae.flatten())
             mse_all.append(mse.flatten())
@@ -176,7 +181,7 @@ def eval_one_chkpt(*,
 
         # Calculate Ensemble Mean MSE
         ensmean /= ensemble_size
-        emmse = ((masked_truth - ensmean)**2).mean(axis=(1, 2))
+        emmse = ((masked_truth - ensmean) ** 2).mean(axis=(1, 2))
         emmse_all.append(emmse.flatten())
 
         # Do all RALSD at once, to avoid re-calculating power spectrum of truth image
@@ -184,13 +189,15 @@ def eval_one_chkpt(*,
         ralsd_all.append(ralsd.flatten())
 
         # turn list of predictions into array, for CRPS/rank calculations
-        samples_gen = np.stack(samples_gen, axis=-1)  # shape of samples_gen is [n, h, w, c] e.g. [1, 940, 940, 10]
+        samples_gen = np.stack(
+            samples_gen, axis=-1
+        )  # shape of samples_gen is [n, h, w, c] e.g. [1, 940, 940, 10]
 
         # calculate CRPS scores for different pooling methods
         # crps_ensemble is robust to NaN representing missing values,
         # so just fill the masked truth array with np.nan for simplicity
         for method in CRPS_pooling_methods:
-            if method == 'no_pooling':
+            if method == "no_pooling":
                 truth_pooled = masked_truth.filled(np.nan)
                 samples_gen_pooled = samples_gen
             else:
@@ -210,13 +217,17 @@ def eval_one_chkpt(*,
                     # >0, so also invalid)
                     mask_pooled = pool(masked_truth.mask, method)
                     # now create a masked array
-                    masked_truth_temp = ma.array(truth_temp, mask=mask_pooled.astype(bool))
+                    masked_truth_temp = ma.array(
+                        truth_temp, mask=mask_pooled.astype(bool)
+                    )
                     # and fill invalid slots with NaN
                     truth_pooled = masked_truth_temp.filled(np.nan)
 
             # crps_ensemble expects truth dims [N, H, W], pred dims [N, H, W, C]
             # this will have NaN whereever truth was NaN, so use np.nanmean
-            crps_score = np.nanmean(crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled))
+            crps_score = np.nanmean(
+                crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled)
+            )
             del truth_pooled, samples_gen_pooled
             gc.collect()
 
@@ -232,21 +243,41 @@ def eval_one_chkpt(*,
         # Add noise to truth and generated samples to make 0-handling fairer
         # NOTE truth and sample_gen are 'polluted' after this, hence we do this last
         if add_noise:
-            masked_truth += rng.random(size=masked_truth.shape, dtype=np.float32)*noise_factor
-            samples_gen += rng.random(size=samples_gen.shape, dtype=np.float32)*noise_factor
+            masked_truth += (
+                rng.random(size=masked_truth.shape, dtype=np.float32) * noise_factor
+            )
+            samples_gen += (
+                rng.random(size=samples_gen.shape, dtype=np.float32) * noise_factor
+            )
 
         if masked_truth.mask is np.ma.nomask:
-            truth_flat = masked_truth.ravel()  # unwrap into one long array, then unwrap samples_gen in same format
-            samples_gen_ranks = samples_gen.reshape((-1, ensemble_size))  # unknown batch size/img dims, known number of samples
+            truth_flat = (
+                masked_truth.ravel()
+            )  # unwrap into one long array, then unwrap samples_gen in same format
+            samples_gen_ranks = samples_gen.reshape(
+                (-1, ensemble_size)
+            )  # unknown batch size/img dims, known number of samples
         else:
-            truth_flat = masked_truth[~masked_truth.mask].ravel()  # pick out only valid elements
-            samples_gen_ranks = samples_gen[~np.squeeze(masked_truth.mask, axis=-1)]  # pick out corresponding predictions
+            truth_flat = masked_truth[
+                ~masked_truth.mask
+            ].ravel()  # pick out only valid elements
+            samples_gen_ranks = samples_gen[
+                ~np.squeeze(masked_truth.mask, axis=-1)
+            ]  # pick out corresponding predictions
 
-        rank = np.count_nonzero(truth_flat[:, None] >= samples_gen_ranks, axis=-1)  # mask array where truth > samples gen, count
+        rank = np.count_nonzero(
+            truth_flat[:, None] >= samples_gen_ranks, axis=-1
+        )  # mask array where truth > samples gen, count
         ranks.append(rank)
 
         # keep track of input and truth rainfall values, to facilitate further ranks processing
-        cond_exp = np.repeat(np.repeat(data.denormalise(cond[..., tpidx]).astype(np.float32), ds_fac, axis=-1), ds_fac, axis=-2)
+        cond_exp = np.repeat(
+            np.repeat(
+                data.denormalise(cond[..., tpidx]).astype(np.float32), ds_fac, axis=-1
+            ),
+            ds_fac,
+            axis=-2,
+        )
 
         if masked_truth.mask is np.ma.nomask:
             lowress.append(cond_exp.ravel())
@@ -260,7 +291,7 @@ def eval_one_chkpt(*,
 
         if show_progress:
             emrmse_so_far = np.sqrt(np.mean(np.concatenate(emmse_all)))
-            crps_mean = np.mean(crps_scores['no_pooling'])
+            crps_mean = np.mean(crps_scores["no_pooling"])
             losses = [("EM-RMSE", emrmse_so_far), ("CRPS", crps_mean)]
             progbar.add(1, values=losses)
 
@@ -270,10 +301,10 @@ def eval_one_chkpt(*,
     ralsd_all = np.concatenate(ralsd_all)
 
     other = {}
-    other['mae'] = mae_all
-    other['mse'] = mse_all
-    other['emmse'] = emmse_all
-    other['ralsd'] = ralsd_all
+    other["mae"] = mae_all
+    other["mse"] = mse_all
+    other["emmse"] = emmse_all
+    other["ralsd"] = ralsd_all
 
     ranks = np.concatenate(ranks)
     lowress = np.concatenate(lowress)
@@ -288,40 +319,68 @@ def eval_one_chkpt(*,
 
 
 def rank_OP(norm_ranks, num_ranks=100):
-    op = np.count_nonzero(
-        (norm_ranks == 0) | (norm_ranks == 1)
-    )
-    op = float(op)/len(norm_ranks)
+    op = np.count_nonzero((norm_ranks == 0) | (norm_ranks == 1))
+    op = float(op) / len(norm_ranks)
     return op
 
 
 def log_line(log_fname, line):
-    with open(log_fname, 'a') as f:
+    with open(log_fname, "a") as f:
         print(line, file=f)
 
 
+def evaluate_multiple_checkpoints(
+    *,
+    mode,
+    arch,
+    val_years,
+    log_fname,
+    weights_dir,
+    autocoarsen,
+    add_noise,
+    noise_factor,
+    model_numbers,
+    ranks_to_save,
+    num_images,
+    filters_gen,
+    filters_disc,
+    input_channels,
+    latent_variables,
+    noise_channels,
+    padding,
     ensemble_size,
     hour,
+):
     df_dict = read_config.read_downscaling_factor()
 
-    gen, data_gen_valid = setup_inputs(mode=mode,
-                                       arch=arch,
-                                       downscaling_steps=df_dict["steps"],
-                                       val_years=val_years,
-                                       autocoarsen=autocoarsen,
-                                       input_channels=input_channels,
-                                       filters_gen=filters_gen,
-                                       filters_disc=filters_disc,
-                                       noise_channels=noise_channels,
-                                       latent_variables=latent_variables,
-                                       padding=padding)
+    gen, data_gen_valid = setup_inputs(
+        mode=mode,
+        arch=arch,
+        downscaling_steps=df_dict["steps"],
+        val_years=val_years,
+        autocoarsen=autocoarsen,
+        input_channels=input_channels,
+        filters_gen=filters_gen,
+        filters_disc=filters_disc,
+        noise_channels=noise_channels,
+        latent_variables=latent_variables,
+        padding=padding,
+    )
 
     log_line(log_fname, f"Samples per image: {ensemble_size}")
-    log_line(log_fname, f"Initial dates/times: {data_gen_valid.dates[0:4]}, {data_gen_valid.hours[0:4]}")
-    log_line(log_fname, "N CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 RMSE EMRMSE RALSD MAE OP")
+    log_line(
+        log_fname,
+        f"Initial dates/times: {data_gen_valid.dates[0:4]}, {data_gen_valid.hours[0:4]}",
+    )
+    log_line(
+        log_fname,
+        "N CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 RMSE EMRMSE RALSD MAE OP",
+    )
 
     for model_number in model_numbers:
-        gen_weights_file = os.path.join(weights_dir, f"gen_weights-{model_number:07d}.h5")
+        gen_weights_file = os.path.join(
+            weights_dir, f"gen_weights-{model_number:07d}_h{hour}.h5"
+        )
 
         if not os.path.isfile(gen_weights_file):
             print(gen_weights_file, "not found, skipping")
@@ -331,36 +390,46 @@ def log_line(log_fname, line):
         if mode == "VAEGAN":
             _init_VAEGAN(gen, data_gen_valid, 1, latent_variables)
         gen.load_weights(gen_weights_file)
-        arrays, crps, other = eval_one_chkpt(mode=mode,
-                                             gen=gen,
-                                             data_gen=data_gen_valid,
-                                             noise_channels=noise_channels,
-                                             latent_variables=latent_variables,
-                                             num_images=num_images,
-                                             add_noise=add_noise,
-                                             ensemble_size=ensemble_size,
-                                             noise_factor=noise_factor)
+        arrays, crps, other = eval_one_chkpt(
+            mode=mode,
+            gen=gen,
+            data_gen=data_gen_valid,
+            noise_channels=noise_channels,
+            latent_variables=latent_variables,
+            num_images=num_images,
+            add_noise=add_noise,
+            ensemble_size=ensemble_size,
+            noise_factor=noise_factor,
+        )
         ranks, lowress, hiress = arrays
         OP = rank_OP(ranks)
-        CRPS_pixel = np.asarray(crps['no_pooling']).mean()
-        CRPS_max_4 = np.asarray(crps['max_4']).mean()
-        CRPS_max_16 = np.asarray(crps['max_16']).mean()
-        CRPS_avg_4 = np.asarray(crps['avg_4']).mean()
-        CRPS_avg_16 = np.asarray(crps['avg_16']).mean()
+        CRPS_pixel = np.asarray(crps["no_pooling"]).mean()
+        CRPS_max_4 = np.asarray(crps["max_4"]).mean()
+        CRPS_max_16 = np.asarray(crps["max_16"]).mean()
+        CRPS_avg_4 = np.asarray(crps["avg_4"]).mean()
+        CRPS_avg_16 = np.asarray(crps["avg_16"]).mean()
 
-        mae = other['mae'].mean()
-        rmse = np.sqrt(other['mse'].mean())
-        emrmse = np.sqrt(other['emmse'].mean())
-        ralsd = np.nanmean(other['ralsd'])
+        mae = other["mae"].mean()
+        rmse = np.sqrt(other["mse"].mean())
+        emrmse = np.sqrt(other["emmse"].mean())
+        ralsd = np.nanmean(other["ralsd"])
 
-        log_line(log_fname, f"{model_number} {CRPS_pixel:.6f} {CRPS_max_4:.6f} {CRPS_max_16:.6f} {CRPS_avg_4:.6f} {CRPS_avg_16:.6f} {rmse:.6f} {emrmse:.6f} {ralsd:.6f} {mae:.6f} {OP:.6f}")
+        log_line(
+            log_fname,
+            f"{model_number} {CRPS_pixel:.6f} {CRPS_max_4:.6f} {CRPS_max_16:.6f} {CRPS_avg_4:.6f} {CRPS_avg_16:.6f} {rmse:.6f} {emrmse:.6f} {ralsd:.6f} {mae:.6f} {OP:.6f}",
+        )
 
         # save one directory up from model weights, in same dir as logfile
         ranks_folder = os.path.dirname(log_fname)
 
         if model_number in ranks_to_save:
             fname = f"ranksnew-{val_years}-{model_number}.npz"
-            np.savez_compressed(os.path.join(ranks_folder, fname), ranks=ranks, lowres=lowress, hires=hiress)
+            np.savez_compressed(
+                os.path.join(ranks_folder, fname),
+                ranks=ranks,
+                lowres=lowress,
+                hires=hiress,
+            )
 
 
 def calculate_ralsd_rmse(truth, samples):
@@ -392,6 +461,6 @@ def calculate_ralsd_rmse(truth, samples):
         else:
             fft_freq_pred = rapsd(np.squeeze(pred, axis=0), fft_method=np.fft)
             dBpred = 10 * np.log10(fft_freq_pred)
-            rmse = np.sqrt(np.nanmean((dBtruth-dBpred)**2))
+            rmse = np.sqrt(np.nanmean((dBtruth - dBpred) ** 2))
             ralsd_all.append(rmse)
     return np.array(ralsd_all)
