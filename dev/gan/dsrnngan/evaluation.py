@@ -101,7 +101,7 @@ def eval_one_chkpt(
     ralsd_all = []
 
     data_gen_iter = iter(data_gen)
-    tpidx = data.all_fcst_fields.index("tp")
+    tpidx = data.all_fcst_fields.index("t2m")
     batch_size = 1  # do one full-size image at a time
 
     if mode == "det":
