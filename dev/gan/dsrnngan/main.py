@@ -295,6 +295,7 @@ if __name__ == "__main__":
             noise_channels=noise_channels,
             padding=padding,
             ensemble_size=10,
+            hour=train_hour,
         )
 
     if args.plot_ranks:
