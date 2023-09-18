@@ -80,11 +80,16 @@ def plot_sequences(gen,
 
     value_range = (0, 5)
 
+    inputs, outputs = next(data_gen_iter)
+    cond_year = inputs["lo_res_inputs"].squeeze()
+    const_year = inputs["hi_res_inputs"].squeeze()
+    seq_real_year = outputs["output"].squeeze()
     for kk in range(num_cases):
-        inputs, outputs = next(data_gen_iter)
-        cond = inputs['lo_res_inputs']
-        const = inputs['hi_res_inputs']
-        seq_real = outputs['output']
+        ## index data_gen_validation output cause it contains
+        ## full year of data
+        cond = np.expand_dims(cond_year[kk, ...], -1)
+        const = const_year[...]
+        seq_real = np.expand_dims(seq_real_year[kk, ...], -1)
 
         seq_gen = []
         batch_size = cond.shape[0]
