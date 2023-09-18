@@ -101,7 +101,7 @@ dates = predict_year
 if problem_type == "normal":
     autocoarsen = False
     plot_input_title = 'Forecast'
-    input_channels = 9
+    input_channels = 1
 elif problem_type == "autocoarsen":
     autocoarsen = True
     plot_input_title = 'Downsampled'
