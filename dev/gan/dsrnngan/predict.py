@@ -95,6 +95,8 @@ batch_size = 1
 weights_fn = os.path.join(
     log_folder, "models", f"gen_weights-{model_number}_h{train_hour}.h5"
 )
+# dates = get_dates(predict_year)
+dates = predict_year
 
 if problem_type == "normal":
     autocoarsen = False
