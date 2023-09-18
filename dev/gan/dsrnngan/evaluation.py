@@ -300,26 +300,8 @@ def log_line(log_fname, line):
         print(line, file=f)
 
 
-def evaluate_multiple_checkpoints(*,
-                                  mode,
-                                  arch,
-                                  val_years,
-                                  log_fname,
-                                  weights_dir,
-                                  autocoarsen,
-                                  add_noise,
-                                  noise_factor,
-                                  model_numbers,
-                                  ranks_to_save,
-                                  num_images,
-                                  filters_gen,
-                                  filters_disc,
-                                  input_channels,
-                                  latent_variables,
-                                  noise_channels,
-                                  padding,
-                                  ensemble_size):
-
+    ensemble_size,
+    hour,
     df_dict = read_config.read_downscaling_factor()
 
     gen, data_gen_valid = setup_inputs(mode=mode,
