@@ -39,16 +39,17 @@ def train_model(
     elif mode == "det":
         loss_log = model.train(batch_gen_train, steps_per_checkpoint)
 
-    plots.plot_sequences(
-        model.gen,
-        mode,
-        data_gen_valid,
-        checkpoint,
-        noise_channels=noise_channels,
-        latent_variables=latent_variables,
-        num_cases=num_cases,  # number of examples to plot
-        ens_size=4,  # number of ensemble members to draw for each example
-        out_fn=plot_fn,
-    )
+    ## not needed for now
+    # plots.plot_sequences(
+    #     model.gen,
+    #     mode,
+    #     data_gen_valid,
+    #     checkpoint,
+    #     noise_channels=noise_channels,
+    #     latent_variables=latent_variables,
+    #     num_cases=num_cases,  # number of examples to plot
+    #     ens_size=4,  # number of ensemble members to draw for each example
+    #     out_fn=plot_fn,
+    # )
 
     return loss_log
