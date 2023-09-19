@@ -22,7 +22,8 @@ def denormalise(x):
     """
     Undo log-transform of rainfall.  Also cap at 500 (feel free to adjust according to application!)
     """
-    return np.minimum(10**x - 1, 500.0)
+    # return np.minimum(10**x - 1, 500.0)
+    return x
 
 
 # Not needed in our application
