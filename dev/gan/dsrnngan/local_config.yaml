@@ -17,13 +17,13 @@ SETUP:
     log_folder: "/data/logs_cgan"
 
 GENERATOR:
-    filters_gen: 128  # generator network width
+    filters_gen: 128 #128  # generator network width
     noise_channels: 4  # only used for GAN
     latent_variables: 50  # latent variables per pixel; only used for VAEGAN
     learning_rate_gen: 1e-5  # if training blows up, decrease this
 
 DISCRIMINATOR:
-    filters_disc: 512  # discriminator network width
+    filters_disc: 512 #512  # discriminator network width
     learning_rate_disc: 1e-5  # if training blows up, decrease this
 
 TRAIN:
@@ -31,7 +31,7 @@ TRAIN:
     training_hour: 0  # hour of the day for which model is trained 
     training_weights: [1.,]  # only for precip with 4 classes [0.4, 0.3, 0.2, 0.1]  # frequency to sample from each bin
     num_samples: 2557  # 2010 to 2016; total generator training samples
-    steps_per_checkpoint: 1000  # number of batches per checkpoint save
+    steps_per_checkpoint: 100  # number of batches per checkpoint save
     batch_size: 2  # we could use 16 without CL, or 2 with CL
     kl_weight: 1e-8  # used for VAEGAN
     ensemble_size: 8  # size of ensemble for content loss; use null to turn off
