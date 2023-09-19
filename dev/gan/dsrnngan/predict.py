@@ -127,7 +127,7 @@ data_predict = DataGeneratorFull(
     log_precip=False,
     shuffle=True,
     constants=True,
-    hour="random",
+    hour=train_hour,
     fcst_norm=True,
     autocoarsen=autocoarsen,
 )
