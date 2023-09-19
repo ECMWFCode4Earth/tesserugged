@@ -309,7 +309,9 @@ da = xr.DataArray(
     ],
 )
 da.name = "t2m_prediction_gan_00"
-out_path = f"/data/TESTING/GAN/predictions/prediction_gan_ensemble_00_{dates_save[0]}.nc"
+out_path = (
+    f"/data/TESTING/GAN/predictions/prediction_gan_ensemble_00_{dates_save[0]}.nc"
+)
 da.to_netcdf(out_path)
 print(f"saved prediction to {out_path}")
 quit("end of predict.py")
