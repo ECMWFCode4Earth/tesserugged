@@ -130,6 +130,7 @@ data_predict = DataGeneratorFull(
     hour=train_hour,
     fcst_norm=True,
     autocoarsen=autocoarsen,
+    prediction=True,
 )
 
 
