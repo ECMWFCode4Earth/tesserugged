@@ -41,11 +41,18 @@ def get_dates(year):
     return sorted(dates)
 
 
-def load_truth_and_mask(hour, year, log_precip=False, aggregate=1):
+def load_truth_and_mask(hour, year, log_precip=False, aggregate=1, prediction=False):
     hour = str(hour).zfill(2)
     year_start = f"01-01-{year}"
     year_end = f"31-12-{year}"
+
     data_path = os.path.join(TRUTH_PATH, f"t2m_cerra_{hour}_residuals.nc")
+    ## WARNING: hardcoded for testing time range
+    if prediction:
+        data_path = os.path.join(
+            TRUTH_PATH.replace("TRAINING", "TESTING"), f"t2m_cerra_{hour}_residuals.nc"
+        )
+    ###########
     data = xr.open_dataset(data_path)
     assert int(hour) + aggregate < 25
     y = np.array(data[f"t2m_cerra_{hour}.nc"].sel(time=slice(year_start, year_end)))
@@ -121,6 +128,7 @@ def load_fcst_truth_batch(
     hour=0,
     norm=False,
     years=None,
+    prediction=False,
 ):
     batch_x = []  # forecast
     batch_y = []  # truth
@@ -141,9 +149,18 @@ def load_fcst_truth_batch(
     for i, year in enumerate(batch_dates):
         h = hours[i]
         batch_x.append(
-            load_fcst_stack(fcst_fields, h, log_precip=log_precip, norm=norm, year=year)
+            load_fcst_stack(
+                fcst_fields,
+                h,
+                log_precip=log_precip,
+                norm=norm,
+                year=year,
+                prediction=prediction,
+            )
         )
-        truth, mask = load_truth_and_mask(h, year, log_precip=log_precip)
+        truth, mask = load_truth_and_mask(
+            h, year, log_precip=log_precip, prediction=prediction
+        )
         batch_y.append(truth)
         batch_mask.append(mask)
 
@@ -166,7 +183,7 @@ def load_fcst_truth_batch(
     return np.array(batch_x), np.array(batch_y), np.array(batch_mask)
 
 
-def load_fcst(ifield, hour, log_precip=False, norm=False, year=None):
+def load_fcst(ifield, hour, log_precip=False, norm=False, year=None, prediction=False):
     # Get the time required (compensating for IFS forecast saving precip at the end of the timestep)
     # time = datetime(
     #     year=int(date[:4]), month=int(date[4:6]), day=int(date[6:8]), hour=hour
@@ -208,7 +225,14 @@ def load_fcst(ifield, hour, log_precip=False, norm=False, year=None):
 
     # ds_path = os.path.join(FCST_PATH, f"{fleheader}_{loaddata_str}.nc")
     hour = str(hour).zfill(2)
+
     ds_path = os.path.join(FCST_PATH, f"t2m_era5_{hour}_residuals.nc")
+    ## WARNING: hardcoded for test data
+    if prediction:
+        ds_path = os.path.join(
+            FCST_PATH.replace("TRAINING", "TESTING"), f"t2m_era5_{hour}_residuals.nc"
+        )
+    ##########
     ds = xr.open_dataset(ds_path)
     # data = ds[field]
     data = ds[f"t2m_era5_{hour}.nc"]
@@ -268,11 +292,20 @@ def load_fcst(ifield, hour, log_precip=False, norm=False, year=None):
 # quit()
 
 
-def load_fcst_stack(fields, hour, log_precip=False, norm=False, year=None):
+def load_fcst_stack(
+    fields, hour, log_precip=False, norm=False, year=None, prediction=False
+):
     field_arrays = []
     for f in fields:
         field_arrays.append(
-            load_fcst(f, hour, log_precip=log_precip, norm=norm, year=year)
+            load_fcst(
+                f,
+                hour,
+                log_precip=log_precip,
+                norm=norm,
+                year=year,
+                prediction=prediction,
+            )
         )
     return np.stack(field_arrays, -1)
 

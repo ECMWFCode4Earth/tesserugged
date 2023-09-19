@@ -20,6 +20,7 @@ class DataGenerator(Sequence):
         fcst_norm=True,
         autocoarsen=False,
         seed=9999,
+        prediction=False,
     ):
         # self.dates = [
         #     1,
@@ -63,6 +64,7 @@ class DataGenerator(Sequence):
         self.hour = hour
         self.fcst_norm = fcst_norm
         self.autocoarsen = autocoarsen
+        self.prediction = prediction
         if self.autocoarsen:
             # read downscaling factor from file
             df_dict = read_config.read_downscaling_factor()  # read downscaling params
@@ -107,6 +109,7 @@ class DataGenerator(Sequence):
             hour=hours_batch,
             norm=self.fcst_norm,
             years=self.dates,
+            prediction=self.prediction,
         )
         print(f"{data_x_batch.shape = }")  # (1, 365, 32, 48, 1)
         print(f"{data_y_batch.shape = }")  # (1, 365, 160, 240)
