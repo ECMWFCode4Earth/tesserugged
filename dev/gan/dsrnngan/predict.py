@@ -264,6 +264,33 @@ for i in range(num_samples):
         pred_ensemble = np.array(pred_ensemble)
         pred.append(pred_ensemble)
 
+## save predicted data
+import xarray as xr
+import pandas as pd
+
+data_paths = read_config.get_data_paths()
+TRUTH_PATH = data_paths["GENERAL"]["TRUTH_PATH"]
+
+timeidx = pd.date_range(
+    start=f"01-01-{dates_save[0]}", periods=len(dates_save), freq="d"
+)
+ds_path = os.path.join(TRUTH_PATH, "t2m_cerra_00_residuals.nc")
+dacoords = xr.open_dataset(ds_path)["t2m_cerra_00.nc"]
+da = xr.DataArray(
+    data=np.array(pred).squeeze(),
+    dims=["time", "ensemble", "y", "x"],
+    coords=[
+        timeidx,
+        range(pred_ensemble_size),
+        dacoords.y,
+        dacoords.x,
+    ],
+)
+da.name = "t2m_prediction_gan_00"
+out_path = f"/data/TESTING/GAN/predictions/prediction_gan_ensemble_00_{dates_save[0]}.nc"
+da.to_netcdf(out_path)
+print(f"saved prediction to {out_path}")
+quit("end of predict.py")
 # not used, but could also generate comparison plots of benchmark approaches
 # data_benchmarks_iter = iter(data_benchmarks)
 # for i in range(num_samples):
