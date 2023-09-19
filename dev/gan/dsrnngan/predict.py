@@ -174,11 +174,24 @@ seq_const = []
 dates_save = []
 hours_save = []
 data_predict_iter = iter(data_predict)
-for i in range(num_samples):
-    inputs, outputs = next(data_predict_iter)
 
-    dates_save.append(data_predict.dates[i])
-    hours_save.append(data_predict.hours[i])
+## will load data for one year, hence outside of the loop
+inputs, outputs = next(data_predict_iter)
+
+## preprocessing for correct indexing
+cond_year = inputs["lo_res_inputs"].squeeze()
+const_year = inputs["hi_res_inputs"].squeeze()
+print(f"{num_samples = }")
+for i in range(num_samples):
+    ## index data_predict_iter output cause it contains
+    ## full year of data to get daily data
+    cond = np.expand_dims(cond_year[i, ...], -1)
+    const = const_year[...]
+
+    # dates_save.append(data_predict.dates[i])
+    # hours_save.append(data_predict.hours[i])
+    dates_save.append(data_predict.dates[0])
+    hours_save.append(data_predict.hours[0])
 
     # autocoarsened problem has only one input field
     if problem_type == "autocoarsen":
@@ -186,42 +199,50 @@ for i in range(num_samples):
             inputs["lo_res_inputs"][..., 0], axis=-1
         )
     # store denormalised inputs, outputs, predictions
-    seq_const.append(inputs["hi_res_inputs"])
-    input_conditions = inputs["lo_res_inputs"].copy()
+    # seq_const.append(inputs["hi_res_inputs"])
+    seq_const.append(const)
+    # input_conditions = inputs["lo_res_inputs"].copy()
 
-    if problem_type != "autocoarsen":
-        # denormalise precip inputs for plotting
-        input_conditions[..., tpidx] = data.denormalise(
-            inputs["lo_res_inputs"][..., tpidx]
-        )
-        input_conditions[..., cpidx] = data.denormalise(
-            inputs["lo_res_inputs"][..., cpidx]
-        )
-        #  denormalise wind inputs
-        input_conditions[..., uidx] = (
-            inputs["lo_res_inputs"][..., uidx] * fcst_norm["u700"][1]
-            + fcst_norm["u700"][0]
-        )
-        input_conditions[..., vidx] = (
-            inputs["lo_res_inputs"][..., vidx] * fcst_norm["v700"][1]
-            + fcst_norm["v700"][0]
-        )
-    else:
-        # assuming one channel only
-        input_conditions[..., 0] = data.denormalise(inputs["lo_res_inputs"][..., 0])
-    seq_cond.append(input_conditions)
+    # if problem_type != "autocoarsen":
+    #     # denormalise precip inputs for plotting
+    #     input_conditions[..., tpidx] = data.denormalise(
+    #         inputs["lo_res_inputs"][..., tpidx]
+    #     )
+    #     # input_conditions[..., cpidx] = data.denormalise(
+    #     #     inputs["lo_res_inputs"][..., cpidx]
+    #     # )
+    #     # #  denormalise wind inputs
+    #     # input_conditions[..., uidx] = (
+    #     #     inputs["lo_res_inputs"][..., uidx] * fcst_norm["u700"][1]
+    #     #     + fcst_norm["u700"][0]
+    #     # )
+    #     # input_conditions[..., vidx] = (
+    #     #     inputs["lo_res_inputs"][..., vidx] * fcst_norm["v700"][1]
+    #     #     + fcst_norm["v700"][0]
+    #     # )
+    # else:
+    #     # assuming one channel only
+    #     input_conditions[..., 0] = data.denormalise(inputs["lo_res_inputs"][..., 0])
 
-    truth = outputs["output"]
-    mask = outputs["mask"]
+    # seq_cond.append(input_conditions)
+    seq_cond.append(data.denormalise(cond))
+
+    # truth = outputs["output"]
+    # mask = outputs["mask"]
+    truth = np.expand_dims(outputs["output"].squeeze()[i, ...], -1)
+    mask = np.expand_dims(outputs["mask"].squeeze()[i, ...], -1)
+
     masked_truth = ma.array(truth, mask=mask)
 
     # make sure ground truth image has correct dimensions
-    sample = np.expand_dims(masked_truth, axis=-1)
-    seq_real.append(data.denormalise(sample))
+    # sample = np.expand_dims(masked_truth, axis=-1)
+    # seq_real.append(data.denormalise(sample))
+    seq_real.append(data.denormalise(masked_truth))
 
     print(f"sample number {i+1}")
     print(f"max truth value is {np.max(seq_real[-1])}")
     pred_ensemble = []
+    print(f"{pred_ensemble_size = }")
     if mode == "det":  # this is plotting det as a model
         pred_ensemble_size = 1  # can't generate an ensemble with deterministic method
         pred_ensemble.append(
@@ -231,7 +252,8 @@ for i in range(num_samples):
         pred.append(pred_ensemble)
     else:
         if mode == "GAN":
-            noise_shape = inputs["lo_res_inputs"][0, ..., 0].shape + (noise_channels,)
+            # noise_shape = inputs["lo_res_inputs"][0, ..., 0].shape + (noise_channels,)
+            noise_shape = cond.shape[:2] + (noise_channels,)
             noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
         elif mode == "VAEGAN":
             noise_shape = inputs["lo_res_inputs"][0, ..., 0].shape + (latent_variables,)
