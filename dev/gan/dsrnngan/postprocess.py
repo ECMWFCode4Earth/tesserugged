@@ -1,3 +1,4 @@
+"""Load yearly predicted data and save as one file"""
 import xarray as xr
 
 
