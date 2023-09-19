@@ -245,8 +245,10 @@ for i in range(num_samples):
             inputs["noise_input"] = noise_gen()
             if mode == "GAN":
                 gan_inputs = [
-                    inputs["lo_res_inputs"],
-                    inputs["hi_res_inputs"],
+                    # inputs["lo_res_inputs"],
+                    # inputs["hi_res_inputs"],
+                    np.array([cond]),
+                    np.array([const]),
                     inputs["noise_input"],
                 ]
                 pred_ensemble.append(data.denormalise(gen.predict(gan_inputs)))
