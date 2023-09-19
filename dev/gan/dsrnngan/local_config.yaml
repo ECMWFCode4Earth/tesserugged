@@ -30,7 +30,7 @@ TRAIN:
     train_years: [2010, 2011, 2012, 2013, 2014, 2015, 2016]
     training_hour: 0  # hour of the day for which model is trained 
     training_weights: [1.,]  # only for precip with 4 classes [0.4, 0.3, 0.2, 0.1]  # frequency to sample from each bin
-    num_samples: 2557  # 2010 to 2016; total generator training samples
+    num_samples: 20456 # x8 for all leadtimes  2557  # 2010 to 2016; total generator training samples
     steps_per_checkpoint: 100  # number of batches per checkpoint save
     batch_size: 2  # we could use 16 without CL, or 2 with CL
     kl_weight: 1e-8  # used for VAEGAN

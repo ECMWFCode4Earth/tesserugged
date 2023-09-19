@@ -153,8 +153,9 @@ def create_dataset(
     # But may want to change in future
     filelist = []
     for yr in years:
-        fpattern = os.path.join(folder, f"{yr}_{hour}.{clss}.tfrecords")
-        filelist += glob.glob(fpattern)
+        for houriter in ["00", "03", "06", "09", "12", "15", "18", "21"]:
+            fpattern = os.path.join(folder, f"{yr}_{houriter}.{clss}.tfrecords")
+            filelist += glob.glob(fpattern)
 
     files_ds = tf.data.Dataset.list_files(filelist)
     ds = tf.data.TFRecordDataset(
