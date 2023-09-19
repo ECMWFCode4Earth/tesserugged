@@ -162,10 +162,10 @@ gen.load_weights(weights_fn)
 #                                     autocoarsen=autocoarsen)
 
 if problem_type != "autocoarsen":
-    tpidx = all_fcst_fields.index("tp")
-    cpidx = all_fcst_fields.index("cp")
-    uidx = all_fcst_fields.index("u700")
-    vidx = all_fcst_fields.index("v700")
+    tpidx = all_fcst_fields.index("t2m")
+    # cpidx = all_fcst_fields.index("cp")
+    # uidx = all_fcst_fields.index("u700")
+    # vidx = all_fcst_fields.index("v700")
 
 pred = []
 seq_real = []
